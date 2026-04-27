@@ -1,0 +1,19 @@
+# macOS / editor
+.DS_Store
+
+# dependencies
+node_modules/
+examples/todomvc/node_modules/
+
+# generated TodoMVC worker artifacts
+examples/todomvc/src/index.js
+examples/todomvc/src/index.js.map
+examples/todomvc/src/index.js.bak
+examples/todomvc/.coffee-build/
+
+# generated schema helper
+examples/todomvc/schema.gen.js
+
+# local Cloudflare/Wrangler state/logs
+.wrangler/
+examples/todomvc/.wrangler/
