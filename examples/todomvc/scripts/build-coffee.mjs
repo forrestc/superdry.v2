@@ -2,22 +2,22 @@ import path from "node:path";
 import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import CoffeeScript from "coffeescript";
 import appCoffeeSource from "../coffee/app.coffee" with { type: "text" };
-import indexCoffeeSource from "../coffee/index.coffee" with { type: "text" };
-import schemaCoffeeSource from "../coffee/schema.coffee" with { type: "text" };
-import themeCoffeeSource from "../coffee/theme.coffee" with { type: "text" };
+import todoControllerCoffeeSource from "../coffee/controllers/todo.coffee" with { type: "text" };
+import todoModelCoffeeSource from "../coffee/models/todo.coffee" with { type: "text" };
+import themeIndexCoffeeSource from "../coffee/themes/index.coffee" with { type: "text" };
 
 const projectRoot = process.cwd();
 const coffeeDir = path.join(projectRoot, "coffee");
 const outDir = path.join(projectRoot, ".coffee-build");
-const bundleEntry = path.join(outDir, "index.js");
+const bundleEntry = path.join(outDir, "app.js");
 const outFile = path.join(projectRoot, "src", "index.js");
 
 // Keep explicit Coffee imports so `bun --watch` reruns this script on source edits.
 const watchInputs = [
   appCoffeeSource,
-  indexCoffeeSource,
-  schemaCoffeeSource,
-  themeCoffeeSource,
+  todoControllerCoffeeSource,
+  todoModelCoffeeSource,
+  themeIndexCoffeeSource,
 ];
 if (watchInputs.length < 4) {
   throw new Error("Coffee watch inputs missing");

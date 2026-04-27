@@ -79,7 +79,7 @@ export todoFooter = createComponent (state, theme, data) ->
       theme.a { className: ['filterLink', data.filter is 'active' and 'filterLinkActive'], href: "/?filter=active#{themeQuery}" }, 'Active'
       theme.a { className: ['filterLink', data.filter is 'completed' and 'filterLinkActive'], href: "/?filter=completed#{themeQuery}" }, 'Completed'
 
-export page = createComponent (state, theme, data) ->
+export layout = createComponent (state, theme, data) ->
   '<!doctype html>' +
     theme.html { lang: 'en' }, ->
       theme.head ->
