@@ -1,5 +1,5 @@
 name = "todomvc-example"
-main = "src/index.js" # This will be the JS entry that loads CoffeeScript
+main = "src/app.js" # This will be the JS entry that loads CoffeeScript
 compatibility_date = "2026-04-25"
 compatibility_flags = ["nodejs_compat"]
 

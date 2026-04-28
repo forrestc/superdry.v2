@@ -210,6 +210,7 @@ export const newApp = (config) => {
     async fetch(request, env) {
       const routes = normalizeRoutes(routeDefs);
       const url = new URL(request.url);
+      const originalMethod = request.method.toUpperCase();
       let parsedFormData;
       const getFormData = async () => {
         if (!parsedFormData) {
@@ -280,7 +281,7 @@ export const newApp = (config) => {
         readFormData: getFormData,
       };
 
-      if ((method === 'POST' || method === 'PATCH') && isFormLikeContentType(request)) {
+      if (originalMethod === 'POST' && isFormLikeContentType(request)) {
         try {
           req.formData = await getFormData();
         } catch {

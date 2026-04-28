@@ -19,8 +19,11 @@ export listTodos = (db, filter = 'all') ->
   db.select().from(todos).orderBy(db.desc(todos.id))
 
 export countActiveTodos = (db) ->
-  [{ count }] = await db.select({ count: db.count(todos.id) }).from(todos).where(db.eq(todos.completed, false))
-  count
+  rows = await db
+    .select({ id: todos.id })
+    .from(todos)
+    .where(db.eq(todos.completed, false))
+  rows.length
 
 export createTodo = (db, text) ->
   [insertedTodo] = await db.insert(todos).values({ text, completed: false }).returning()

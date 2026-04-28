@@ -11,7 +11,7 @@ const projectRoot = process.cwd();
 const coffeeDir = path.join(projectRoot, "coffee");
 const outDir = path.join(projectRoot, ".coffee-build");
 const bundleEntry = path.join(outDir, "app.js");
-const outFile = path.join(projectRoot, "src", "index.js");
+const outFile = path.join(projectRoot, "src", "app.js");
 
 // Keep explicit Coffee imports so `bun --watch` reruns this script on source edits.
 const watchInputs = [
@@ -92,6 +92,6 @@ try {
   await bundleCompiledEntry();
 } finally {
   // Keep `.coffee-build` ephemeral to avoid confusion about the runtime entrypoint.
-  // `src/index.js` is the only persistent generated artifact used by Wrangler.
+  // `src/app.js` is the only persistent generated artifact used by Wrangler.
   await rm(outDir, { recursive: true, force: true });
 }
