@@ -1,4 +1,4 @@
-import { createComponent, createTheme } from 'superdry'
+import { createTheme } from 'superdry'
 
 export light = createTheme
   tailwindScript: 'https://cdn.tailwindcss.com'
@@ -37,62 +37,4 @@ export dark = createTheme light,
 
 export themes = { light, dark }
 
-export activeCountText = createComponent (_state, _theme, data) ->
-  "#{data.activeCount} item#{if data.activeCount is 1 then '' else 's'} left"
-
-export todoRow = createComponent (_state, theme, data) ->
-  themeQuery = if _state.themeName then "?theme=#{encodeURIComponent(_state.themeName)}" else ''
-  theme.li { className: 'row', id: "todo-#{data.todo.id}" }, ->
-    theme.form { method: 'post', action: "/todos/#{data.todo.id}/toggle#{themeQuery}" }, ->
-      theme.input { type: 'hidden', name: 'filter', value: data.filter }
-      theme.button { className: 'checkbox', type: 'submit' }, (if data.todo.completed then '✓' else '')
-
-    theme.span { className: (if data.todo.completed then 'label labelDone' else 'label') }, data.todo.text
-
-    theme.form { method: 'post', action: "/todos/#{data.todo.id}/delete#{themeQuery}" }, ->
-      theme.input { type: 'hidden', name: 'filter', value: data.filter }
-      theme.button { className: 'deleteBtn', type: 'submit' }, '×'
-
-export todoList = createComponent (state, theme, data) ->
-  theme.ul { className: 'list', id: 'todo-list' }, ->
-    data.items.map (todo) ->
-      todoRow state, theme, { todo, filter: data.filter }
-
-export todoForm = createComponent (_state, theme, data) ->
-  themeQuery = if _state.themeName then "?theme=#{encodeURIComponent(_state.themeName)}" else ''
-  theme.form { className: 'form', id: 'new-todo-form', method: 'post', action: "/todos#{themeQuery}" }, ->
-    theme.input { type: 'hidden', name: 'filter', value: data.filter }
-    theme.input
-      className: 'formInput'
-      id: 'new-todo-input'
-      name: 'text'
-      placeholder: 'What needs to be done?'
-      required: true
-
-export todoFooter = createComponent (state, theme, data) ->
-  themeQuery = if state.themeName then "&theme=#{encodeURIComponent(state.themeName)}" else ''
-  theme.footer { className: 'footer', id: 'todo-footer' }, ->
-    theme.span { id: 'active-count' }, activeCountText state, theme, { activeCount: data.activeCount }
-
-    theme.nav { className: 'filters' }, ->
-      theme.a { className: ['filterLink', data.filter is 'all' and 'filterLinkActive'], href: "/?filter=all#{themeQuery}" }, 'All'
-      theme.a { className: ['filterLink', data.filter is 'active' and 'filterLinkActive'], href: "/?filter=active#{themeQuery}" }, 'Active'
-      theme.a { className: ['filterLink', data.filter is 'completed' and 'filterLinkActive'], href: "/?filter=completed#{themeQuery}" }, 'Completed'
-
-export layout = createComponent (state, theme, data) ->
-  '<!doctype html>' +
-    theme.html { lang: 'en' }, ->
-      theme.head ->
-        theme.meta { charset: 'utf-8' }
-        theme.meta { name: 'viewport', content: 'width=device-width, initial-scale=1' }
-        theme.title 'Superdry TodoMVC'
-        theme.script { src: theme.tailwindScript }
-        theme.script { type: 'module' }, theme.raw("""import "#{theme.turboScript}";""")
-
-      theme.body { className: 'body' }, ->
-        theme.main { className: 'container' }, ->
-          theme.h1 { className: 'heading' }, 'todos'
-          theme.section { className: 'card' }, ->
-            todoForm state, theme, { filter: state.filter }
-            todoList state, theme, { items: data.todos, filter: state.filter }
-            todoFooter state, theme, { activeCount: data.activeCount, filter: state.filter }
+export * from './components'

@@ -3,8 +3,13 @@ import { signal } from '@preact/signals';
 import { TurboStream } from 'node-turbo';
 import { drizzle } from 'drizzle-orm/d1';
 import { desc, eq, sql } from 'drizzle-orm';
-import { createHtmlTheme, ensureHtmlTheme } from './html.js';
-export { createHtmlTheme, ensureHtmlTheme } from './html.js';
+import { ensureTheme } from './html.js';
+export {
+  ensureTheme,
+  isTheme,
+  createTheme as createHtmlTheme,
+  ensureTheme as ensureHtmlTheme,
+} from './html.js';
 
 // --- THEME PROXY ---
 export const createThemeProxy = (themeDef) => {
@@ -27,8 +32,6 @@ export const createThemeProxy = (themeDef) => {
   });
 };
 
-// Runtime themes should stay as plain data (strings, tokens, config).
-// The proxy-based API remains available via createThemeProxy/Component.
 const isPlainObject = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -42,9 +45,9 @@ const mergeTheme = (base = {}, override = {}) => {
 
 export const createTheme = (baseOrTheme, overrideTheme) => {
   if (overrideTheme === undefined) {
-    return baseOrTheme ?? {};
+    return ensureTheme(baseOrTheme ?? {});
   }
-  return mergeTheme(baseOrTheme ?? {}, overrideTheme ?? {});
+  return ensureTheme(mergeTheme(baseOrTheme ?? {}, overrideTheme ?? {}));
 };
 
 export const createComponent = (renderFn) => (...args) => {
@@ -59,9 +62,9 @@ export const createComponent = (renderFn) => (...args) => {
     ('state' in stateOrProps || 'theme' in stateOrProps || 'data' in stateOrProps || 'ctx' in stateOrProps)
   ) {
     const props = stateOrProps;
-    return renderFn(props.state, ensureHtmlTheme(props.theme), props.data, props.ctx);
+    return renderFn(props.state, ensureTheme(props.theme), props.data, props.ctx);
   }
-  return renderFn(stateOrProps, ensureHtmlTheme(theme), data, ctx);
+  return renderFn(stateOrProps, ensureTheme(theme), data, ctx);
 };
 
 export const h = (value = '') =>
@@ -85,6 +88,42 @@ const turboStreamResponse = (stream) =>
   new Response(stream.render(), {
     headers: { 'content-type': 'text/vnd.turbo-stream.html; charset=utf-8' },
   });
+
+const FORM_METHOD_OVERRIDES = new Set(['PUT', 'PATCH', 'DELETE']);
+
+const resolveRequestMethod = async (request, getFormData) => {
+  const method = request.method.toUpperCase();
+  if (method !== 'POST') return method;
+
+  const headerOverride = request.headers.get('x-http-method-override');
+  if (headerOverride) {
+    return headerOverride.toUpperCase();
+  }
+
+  try {
+    const form = await getFormData();
+    const override =
+      form.get('_method') ??
+      form.get('__method') ??
+      form.get('method');
+    const overrideMethod = String(override ?? '').toUpperCase();
+    if (FORM_METHOD_OVERRIDES.has(overrideMethod)) {
+      return overrideMethod;
+    }
+  } catch {
+    // Non-form POST requests can skip method override resolution.
+  }
+
+  return method;
+};
+
+const isFormLikeContentType = (request) => {
+  const contentType = (request.headers.get('content-type') ?? '').toLowerCase();
+  return (
+    contentType.includes('application/x-www-form-urlencoded') ||
+    contentType.includes('multipart/form-data')
+  );
+};
 
 const compilePathPattern = (pathPattern) => {
   const names = [];
@@ -114,6 +153,41 @@ const normalizeRoutes = (routes = []) =>
     _compiled: compilePathPattern(route.path),
   }));
 
+const normalizeRoutePrefix = (prefix = '/') => {
+  if (!prefix) return '/';
+  const normalized = prefix.startsWith('/') ? prefix : `/${prefix}`;
+  if (normalized.length > 1 && normalized.endsWith('/')) {
+    return normalized.slice(0, -1);
+  }
+  return normalized;
+};
+
+const joinRoutePath = (prefix, path = '/') => {
+  const normalizedPrefix = normalizeRoutePrefix(prefix);
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  if (normalizedPath === '/') return normalizedPrefix;
+  if (normalizedPrefix === '/') return normalizedPath;
+  return `${normalizedPrefix}${normalizedPath}`;
+};
+
+export const createRoute = (registerFn) => {
+  const routes = [];
+  const addRoute = (method, path, handler) => {
+    routes.push({ method, path, handler });
+  };
+  const router = {
+    get: (path, handler) => addRoute('GET', path, handler),
+    post: (path, handler) => addRoute('POST', path, handler),
+    put: (path, handler) => addRoute('PUT', path, handler),
+    patch: (path, handler) => addRoute('PATCH', path, handler),
+    delete: (path, handler) => addRoute('DELETE', path, handler),
+  };
+  if (typeof registerFn === 'function') {
+    registerFn(router);
+  }
+  return routes;
+};
+
 export const newApp = (config) => {
   const routeDefs = [...(config.routes ?? [])];
   const registerRoute = (method, path, handler) => {
@@ -125,11 +199,25 @@ export const newApp = (config) => {
     get: (path, handler) => registerRoute('GET', path, handler),
     post: (path, handler) => registerRoute('POST', path, handler),
     put: (path, handler) => registerRoute('PUT', path, handler),
+    patch: (path, handler) => registerRoute('PATCH', path, handler),
     delete: (path, handler) => registerRoute('DELETE', path, handler),
+    route: (prefix, routes = []) => {
+      for (const route of routes) {
+        registerRoute(route.method, joinRoutePath(prefix, route.path), route.handler);
+      }
+      return appInstance;
+    },
     async fetch(request, env) {
       const routes = normalizeRoutes(routeDefs);
       const url = new URL(request.url);
-      const method = request.method.toUpperCase();
+      let parsedFormData;
+      const getFormData = async () => {
+        if (!parsedFormData) {
+          parsedFormData = await request.formData();
+        }
+        return parsedFormData;
+      };
+      const method = await resolveRequestMethod(request, getFormData);
       const pathname = url.pathname;
       const query = Object.fromEntries(url.searchParams.entries());
       const themes = config.themes ?? {};
@@ -143,7 +231,7 @@ export const newApp = (config) => {
       const themeName = (requestedThemeName && themes[requestedThemeName])
         ? requestedThemeName
         : fallbackThemeName;
-      const selectedTheme = themeName ? ensureHtmlTheme(themes[themeName]) : undefined;
+      const selectedTheme = themeName ? ensureTheme(themes[themeName]) : undefined;
       const state = config.parseState
         ? await config.parseState({
           request,
@@ -185,17 +273,20 @@ export const newApp = (config) => {
         themeName,
       };
 
-      let parsedFormData;
       const req = {
         ...baseReq,
         app,
-        formData: async () => {
-          if (!parsedFormData) {
-            parsedFormData = await request.formData();
-          }
-          return parsedFormData;
-        },
+        formData: undefined,
+        readFormData: getFormData,
       };
+
+      if ((method === 'POST' || method === 'PATCH') && isFormLikeContentType(request)) {
+        try {
+          req.formData = await getFormData();
+        } catch {
+          req.formData = undefined;
+        }
+      }
 
       let stream;
       const res = {

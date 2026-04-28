@@ -5,6 +5,7 @@ import appCoffeeSource from "../coffee/app.coffee" with { type: "text" };
 import todoControllerCoffeeSource from "../coffee/controllers/todo.coffee" with { type: "text" };
 import todoModelCoffeeSource from "../coffee/models/todo.coffee" with { type: "text" };
 import themeIndexCoffeeSource from "../coffee/themes/index.coffee" with { type: "text" };
+import themeComponentsCoffeeSource from "../coffee/themes/components.coffee" with { type: "text" };
 
 const projectRoot = process.cwd();
 const coffeeDir = path.join(projectRoot, "coffee");
@@ -18,8 +19,9 @@ const watchInputs = [
   todoControllerCoffeeSource,
   todoModelCoffeeSource,
   themeIndexCoffeeSource,
+  themeComponentsCoffeeSource,
 ];
-if (watchInputs.length < 4) {
+if (watchInputs.length < 5) {
   throw new Error("Coffee watch inputs missing");
 }
 

@@ -1,5 +1,5 @@
 import { newApp } from 'superdry'
-import { addTodo, toggleTodo, deleteTodo } from './controllers/todo'
+import { todoRoute } from './controllers/todo'
 import { listTodos, countActiveTodos, normalizeFilter } from './models/todo'
 import { layout, themes } from './themes'
 
@@ -10,10 +10,8 @@ app = newApp
   themes: themes
   getDefaultThemeName: ->
     DEFAULT_THEME_BY_HOUR()
-  parseState: ({ url, theme, themeName }) ->
+  parseState: ({ url }) ->
     filter: normalizeFilter(url.searchParams.get('filter') ? 'all')
-    theme: theme
-    themeName: themeName
   loadPageData: (app) ->
     [todoItems, activeCount] = await Promise.all [listTodos(app.db, app.state.filter), countActiveTodos(app.db)]
     todos: todoItems
@@ -21,8 +19,6 @@ app = newApp
   renderPage: ({ app, data }) ->
     layout app.state, app.state.theme, data
 
-app.post '/todos', addTodo
-app.post '/todos/:id/toggle', toggleTodo
-app.post '/todos/:id/delete', deleteTodo
+app.route '/todos', todoRoute
 
 export default app

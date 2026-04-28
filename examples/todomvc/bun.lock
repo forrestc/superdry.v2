@@ -7,7 +7,6 @@
       "dependencies": {
         "coffeescript": "^2.7.0",
         "drizzle-orm": "^0.45.2",
-        "node-turbo": "^1.3.0",
         "superdry": "../..",
       },
       "devDependencies": {
@@ -215,7 +214,7 @@
 
     "source-map-support": ["source-map-support@0.5.21", "", { "dependencies": { "buffer-from": "^1.0.0", "source-map": "^0.6.0" } }, "sha512-uBHU3L3czsIyYXKX88fdrGovxdSCoTGDRZ6SYXtSRxLZUzHg5P/66Ht6uoUlHu9EZod+inXhKo3qQgwXUT/y1w=="],
 
-    "superdry": ["superdry@file:../..", { "dependencies": { "@preact/signals": "^1.2.2", "preact": "^10.19.0" } }],
+    "superdry": ["superdry@file:../..", { "dependencies": { "@preact/signals": "^1.2.2", "drizzle-orm": "^0.45.2", "node-turbo": "^1.3.0", "preact": "^10.19.0" } }],
 
     "supports-color": ["supports-color@10.2.2", "", {}, "sha512-SS+jx45GF1QjgEXQx4NJZV9ImqmO2NPz5FNsIHrsDjh2YsHnawpan7SNQ1o8NuhrbHZy9AZhIoCUiCeaW/C80g=="],
 

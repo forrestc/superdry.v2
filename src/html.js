@@ -84,6 +84,19 @@ export const createHtmlTheme = (themeDef = {}) => {
       children = args.slice(1);
     }
 
+    if (tagName === "form" && typeof props.method === "string") {
+      const requestedMethod = props.method.toUpperCase();
+      if (!["GET", "POST", "DIALOG"].includes(requestedMethod)) {
+        props = { ...props, method: "post" };
+        children = [
+          makeRaw(
+            `<input type="hidden" name="_method" value="${escapeHtml(requestedMethod)}">`
+          ),
+          ...children,
+        ];
+      }
+    }
+
     const attrs = [];
     const classSource = props.className ?? props.class;
     if (classSource !== undefined && classSource !== null && classSource !== false) {
@@ -137,5 +150,10 @@ export const isHtmlTheme = (value) =>
 
 export const ensureHtmlTheme = (value = {}) =>
   isHtmlTheme(value) ? value : createHtmlTheme(value);
+
+// Preferred generic naming: a theme is always HTML-capable.
+export const createTheme = createHtmlTheme;
+export const isTheme = isHtmlTheme;
+export const ensureTheme = ensureHtmlTheme;
 
 export { escapeHtml };

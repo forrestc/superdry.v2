@@ -5,10 +5,11 @@ import {
   toggleTodoCompleted
   deleteTodoById
 } from '../models/todo'
+import { createRoute } from 'superdry'
 import { todoForm, todoRow, activeCountText } from '../themes'
 
 export addTodo = (app, req, res) ->
-  form = await req.formData()
+  form = req.formData
   text = String(form.get('text') ? '').trim()
   filter = normalizeFilter String(form.get('filter') ? app.state.filter)
 
@@ -28,7 +29,7 @@ export addTodo = (app, req, res) ->
       stream.prepend 'todo-list', todoRow app.state, app.state.theme, { todo: insertedTodo, filter }
 
 export toggleTodo = (app, req, res) ->
-  form = await req.formData()
+  form = req.formData
   filter = normalizeFilter String(form.get('filter') ? app.state.filter)
   id = Number(req.params.id)
 
@@ -51,7 +52,7 @@ export toggleTodo = (app, req, res) ->
     stream.update 'active-count', activeCountText app.state, app.state.theme, { activeCount }
 
 export deleteTodo = (app, req, res) ->
-  form = await req.formData()
+  form = req.formData
   filter = normalizeFilter String(form.get('filter') ? app.state.filter)
   id = Number(req.params.id)
 
@@ -62,3 +63,8 @@ export deleteTodo = (app, req, res) ->
     stream
       .remove "todo-#{id}"
       .update 'active-count', activeCountText app.state, app.state.theme, { activeCount }
+
+export todoRoute = createRoute (r) ->
+  r.post '/', addTodo
+  r.patch '/:id/toggle', toggleTodo
+  r.delete '/:id', deleteTodo
