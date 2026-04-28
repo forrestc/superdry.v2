@@ -3,6 +3,7 @@ import { signal } from '@preact/signals';
 import { TurboStream } from 'node-turbo';
 import { drizzle } from 'drizzle-orm/d1';
 import { desc, eq, sql } from 'drizzle-orm';
+import { integer, sqliteTable, text as sqliteText } from 'drizzle-orm/sqlite-core';
 import { ensureTheme } from './html.js';
 export {
   ensureTheme,
@@ -10,6 +11,150 @@ export {
   createTheme as createHtmlTheme,
   ensureTheme as ensureHtmlTheme,
 } from './html.js';
+
+const TYPE_BUILDER_SYMBOL = Symbol('superdryTypeBuilder');
+
+export const EMAIL_FORMAT = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const buildColumnByType = (kind, fieldName, options = {}) => {
+  if (kind === 'integer') return integer(fieldName, options);
+  if (kind === 'text') return sqliteText(fieldName, options);
+  if (kind === 'boolean') return integer(fieldName, { ...options, mode: 'boolean' });
+  if (kind === 'uuid') return sqliteText(fieldName, options);
+  throw new Error(`Unsupported type "${kind}" for field "${fieldName}"`);
+};
+
+const isTypeBuilder = (value) => Boolean(value?.[TYPE_BUILDER_SYMBOL]);
+
+const normalizeFormatValidator = (formatRule) => {
+  if (formatRule === EMAIL_FORMAT) {
+    return {
+      test: (value) => value === undefined || value === null || EMAIL_FORMAT.test(String(value)),
+      error: 'format is not email',
+    };
+  }
+
+  if (formatRule instanceof RegExp) {
+    return {
+      test: (value) => value === undefined || value === null || formatRule.test(String(value)),
+      error: `format must match ${formatRule}`,
+    };
+  }
+
+  if (typeof formatRule === 'function') {
+    return {
+      test: (value, record) => {
+        const result = formatRule(value, record);
+        if (typeof result === 'object' && result !== null) {
+          return result.valid !== false;
+        }
+        return Boolean(result);
+      },
+      error: 'format is invalid',
+    };
+  }
+
+  if (typeof formatRule === 'string') {
+    return {
+      test: (value) => value === undefined || value === null || String(value).includes(formatRule),
+      error: `format must include "${formatRule}"`,
+    };
+  }
+
+  return {
+    test: () => true,
+    error: 'format is invalid',
+  };
+};
+
+export const type = (kind, options = {}) => {
+  const operations = [];
+  const validators = [];
+  let required = false;
+
+  const builderTarget = {
+    [TYPE_BUILDER_SYMBOL]: true,
+    getRequired() {
+      return required;
+    },
+    build(fieldName) {
+      let column = buildColumnByType(kind, fieldName, options);
+      for (const operation of operations) {
+        column = column[operation.method](...operation.args);
+      }
+      return { column, validators };
+    },
+  };
+
+  let builderProxy;
+  builderProxy = new Proxy(builderTarget, {
+    get(target, prop) {
+      if (prop in target) return target[prop];
+      if (prop === 'format') {
+        return (formatRule) => {
+          validators.push(normalizeFormatValidator(formatRule));
+          return builderProxy;
+        };
+      }
+      return (...args) => {
+        if (prop === 'notNull') required = true;
+        operations.push({ method: prop, args });
+        return builderProxy;
+      };
+    },
+  });
+  return builderProxy;
+};
+
+export const createModel = (definition = {}) => {
+  const tableName = definition.table;
+  if (!tableName || typeof tableName !== 'string') {
+    throw new Error('createModel requires a string "table" name');
+  }
+
+  const columnDefinitions = {};
+  const validatorsByField = {};
+
+  for (const [fieldName, fieldDefinition] of Object.entries(definition)) {
+    if (fieldName === 'table') continue;
+    if (!isTypeBuilder(fieldDefinition)) {
+      throw new Error(`Field "${fieldName}" must be created with type(...)`);
+    }
+    const { column, validators } = fieldDefinition.build(fieldName);
+    columnDefinitions[fieldName] = column;
+    validatorsByField[fieldName] = validators;
+  }
+
+  const table = sqliteTable(tableName, columnDefinitions);
+
+  const validate = (record = {}) => {
+    const errors = [];
+
+    for (const [fieldName, fieldDefinition] of Object.entries(definition)) {
+      if (fieldName === 'table') continue;
+      const value = record[fieldName];
+
+      if ((value === undefined || value === null) && fieldDefinition.getRequired?.()) {
+        errors.push({ field: fieldName, error: 'required' });
+      }
+
+      const validators = validatorsByField[fieldName] ?? [];
+      for (const validator of validators) {
+        if (!validator.test(value, record)) {
+          errors.push({ field: fieldName, error: validator.error });
+        }
+      }
+    }
+
+    return { validated: errors.length === 0, errors };
+  };
+
+  return {
+    table,
+    validate,
+    ...table,
+  };
+};
 
 // --- THEME PROXY ---
 export const createThemeProxy = (themeDef) => {

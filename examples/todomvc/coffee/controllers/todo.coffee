@@ -10,7 +10,7 @@ import { todoForm, todoRow, activeCountText } from '../themes'
 
 export todoRoute = createRoute (r) ->
   r.post '/', (app, req, res) ->
-    text = String(req.form.get('text') ? '').trim()
+    text = String(req.formData.get('text') ? '').trim()
     filter = normalizeFilter String(req.query.filter ? app.state.filter)
 
     unless text
@@ -30,33 +30,26 @@ export todoRoute = createRoute (r) ->
 
   r.patch '/:id/toggle', (app, req, res) ->
     filter = normalizeFilter String(req.query.filter ? app.state.filter)
-    id = Number(req.params.id)
-
-    result = await toggleTodoCompleted(app.db, id)
-    return res.redirect("/?filter=#{filter}") unless result?.updated
-
-    { updated } = result
+    { updated } = await toggleTodoCompleted(app.db, req.params.id)
     activeCount = await countActiveTodos(app.db)
     isVisible =
       filter is 'all' or
-      (filter is 'active' and !updated.completed) or
-      (filter is 'completed' and updated.completed)
+      (filter is 'active' and !updated?.completed) or
+      (filter is 'completed' and updated?.completed)
 
     res.stream (stream) ->
       if isVisible
-        stream.replace "todo-#{id}", todoRow app.state, app.state.theme, { todo: updated, filter }
+        stream.replace "todo-#{req.params.id}", todoRow app.state, app.state.theme, { todo: updated, filter }
       else
-        stream.remove "todo-#{id}"
+        stream.remove "todo-#{req.params.id}"
 
       stream.update 'active-count', activeCountText app.state, app.state.theme, { activeCount }
 
   r.delete '/:id', (app, req, res) ->
-    id = Number(req.params.id)
-
-    await deleteTodoById(app.db, id)
+    await deleteTodoById(app.db, req.params.id)
     activeCount = await countActiveTodos(app.db)
 
     res.stream (stream) ->
       stream
-        .remove "todo-#{id}"
+        .remove "todo-#{req.params.id}"
         .update 'active-count', activeCountText app.state, app.state.theme, { activeCount }
