@@ -4,16 +4,16 @@ export activeCountText = createComponent (_state, _theme, data) ->
   "#{data.activeCount} item#{if data.activeCount is 1 then '' else 's'} left"
 
 export todoRow = createComponent (_state, theme, data) ->
-  themeQuery = if _state.themeName then "?theme=#{encodeURIComponent(_state.themeName)}" else ''
+  queryParams = ["filter=#{encodeURIComponent(data.filter)}"]
+  queryParams.push "theme=#{encodeURIComponent(_state.themeName)}" if _state.themeName
+  actionQuery = "?#{queryParams.join('&')}"
   theme.li { className: 'row', id: "todo-#{data.todo.id}" }, ->
-    theme.form { method: 'patch', action: "/todos/#{data.todo.id}/toggle#{themeQuery}" }, ->
-      theme.input { type: 'hidden', name: 'filter', value: data.filter }
+    theme.form { method: 'patch', action: "/todos/#{data.todo.id}/toggle#{actionQuery}" }, ->
       theme.button { className: 'checkbox', type: 'submit' }, (if data.todo.completed then '✓' else '')
 
     theme.span { className: (if data.todo.completed then 'label labelDone' else 'label') }, data.todo.text
 
-    theme.form { method: 'delete', action: "/todos/#{data.todo.id}#{themeQuery}" }, ->
-      theme.input { type: 'hidden', name: 'filter', value: data.filter }
+    theme.form { method: 'delete', action: "/todos/#{data.todo.id}#{actionQuery}" }, ->
       theme.button { className: 'deleteBtn', type: 'submit' }, '×'
 
 export todoList = createComponent (state, theme, data) ->
@@ -22,9 +22,10 @@ export todoList = createComponent (state, theme, data) ->
       todoRow state, theme, { todo, filter: data.filter }
 
 export todoForm = createComponent (_state, theme, data) ->
-  themeQuery = if _state.themeName then "?theme=#{encodeURIComponent(_state.themeName)}" else ''
-  theme.form { className: 'form', id: 'new-todo-form', method: 'post', action: "/todos#{themeQuery}" }, ->
-    theme.input { type: 'hidden', name: 'filter', value: data.filter }
+  queryParams = ["filter=#{encodeURIComponent(data.filter)}"]
+  queryParams.push "theme=#{encodeURIComponent(_state.themeName)}" if _state.themeName
+  actionQuery = "?#{queryParams.join('&')}"
+  theme.form { className: 'form', id: 'new-todo-form', method: 'post', action: "/todos#{actionQuery}" }, ->
     theme.input
       className: 'formInput'
       id: 'new-todo-input'

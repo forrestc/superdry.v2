@@ -10,9 +10,8 @@ import { todoForm, todoRow, activeCountText } from '../themes'
 
 export todoRoute = createRoute (r) ->
   r.post '/', (app, req, res) ->
-    form = req.formData
-    text = String(form.get('text') ? '').trim()
-    filter = normalizeFilter String(form.get('filter') ? app.state.filter)
+    text = String(req.form.get('text') ? '').trim()
+    filter = normalizeFilter String(req.query.filter ? app.state.filter)
 
     unless text
       return res.stream (stream) ->
@@ -30,8 +29,7 @@ export todoRoute = createRoute (r) ->
         stream.prepend 'todo-list', todoRow app.state, app.state.theme, { todo: insertedTodo, filter }
 
   r.patch '/:id/toggle', (app, req, res) ->
-    form = req.formData
-    filter = normalizeFilter String(form.get('filter') ? app.state.filter)
+    filter = normalizeFilter String(req.query.filter ? app.state.filter)
     id = Number(req.params.id)
 
     result = await toggleTodoCompleted(app.db, id)
@@ -53,8 +51,6 @@ export todoRoute = createRoute (r) ->
       stream.update 'active-count', activeCountText app.state, app.state.theme, { activeCount }
 
   r.delete '/:id', (app, req, res) ->
-    form = req.formData
-    filter = normalizeFilter String(form.get('filter') ? app.state.filter)
     id = Number(req.params.id)
 
     await deleteTodoById(app.db, id)
