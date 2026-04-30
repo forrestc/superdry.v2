@@ -2,9 +2,15 @@
   "name": "superdry",
   "version": "2.0.0",
   "main": "src/superdry.js",
+  "exports": {
+    ".": "./src/superdry.js",
+    "./html": "./src/html.js",
+    "./coffee-build": "./src/coffee-build.js"
+  },
   "type": "module",
   "dependencies": {
     "@preact/signals": "^1.2.2",
+    "coffeescript": "^2.7.0",
     "drizzle-orm": "^0.45.2",
     "node-turbo": "^1.3.0",
     "preact": "^10.19.0"
