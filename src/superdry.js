@@ -234,6 +234,47 @@ const turboStreamResponse = (stream) =>
     headers: { 'content-type': 'text/vnd.turbo-stream.html; charset=utf-8' },
   });
 
+const STREAM_RESPONSE_SYMBOL = Symbol('superdryStreamResponse');
+
+const createStreamResponder = () => {
+  let stream;
+  const ensureStream = () => {
+    if (!stream) {
+      stream = new TurboStream();
+    }
+    return stream;
+  };
+
+  const streamApi = (mutator) => {
+    const currentStream = ensureStream();
+    if (typeof mutator === 'function') {
+      mutator(currentStream);
+    }
+    return turboStreamResponse(currentStream);
+  };
+
+  const chainMethod = (methodName) => (...args) => {
+    const currentStream = ensureStream();
+    if (typeof currentStream[methodName] !== 'function') {
+      throw new Error(`TurboStream does not support "${methodName}"`);
+    }
+    currentStream[methodName](...args);
+    return streamApi;
+  };
+
+  streamApi.append = chainMethod('append');
+  streamApi.prepend = chainMethod('prepend');
+  streamApi.replace = chainMethod('replace');
+  streamApi.update = chainMethod('update');
+  streamApi.remove = chainMethod('remove');
+  streamApi.before = chainMethod('before');
+  streamApi.after = chainMethod('after');
+  streamApi.toResponse = () => turboStreamResponse(ensureStream());
+  streamApi[STREAM_RESPONSE_SYMBOL] = true;
+
+  return streamApi;
+};
+
 const FORM_METHOD_OVERRIDES = new Set(['PUT', 'PATCH', 'DELETE']);
 
 const resolveRequestMethod = async (request, getFormData) => {
@@ -434,18 +475,10 @@ export const newApp = (config) => {
         }
       }
 
-      let stream;
+      const stream = createStreamResponder();
       const res = {
         redirect: (path) => redirectResponse(path),
-        stream: (mutator) => {
-          if (!stream) {
-            stream = new TurboStream();
-          }
-          if (typeof mutator === 'function') {
-            mutator(stream);
-          }
-          return turboStreamResponse(stream);
-        },
+        stream,
         notFound: () => new Response('Not Found', { status: 404 }),
       };
 
@@ -454,7 +487,11 @@ export const newApp = (config) => {
         const params = matchPath(route._compiled, pathname);
         if (!params) continue;
         req.params = params;
-        return route.handler(app, req, res);
+        const routeResult = await route.handler(app, req, res);
+        if (routeResult?.[STREAM_RESPONSE_SYMBOL]) {
+          return routeResult.toResponse();
+        }
+        return routeResult;
       }
 
       if (method === 'GET' && pathname === '/') {

@@ -1,0 +1,9 @@
+name = "todomvc-example"
+main = "src/app.js" # This will be the JS entry that loads CoffeeScript
+compatibility_date = "2026-04-25"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "todo-db"
+database_id = "local-only-for-now"

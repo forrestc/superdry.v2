@@ -5,7 +5,8 @@
   "exports": {
     ".": "./src/superdry.js",
     "./html": "./src/html.js",
-    "./coffee-build": "./src/coffee-build.js"
+    "./coffee-build": "./src/coffee-build.js",
+    "./model": "./src/model.js"
   },
   "type": "module",
   "dependencies": {
