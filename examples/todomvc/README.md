@@ -2,6 +2,8 @@
 
 Minimal Todo app built with `superdry`, CoffeeScript, Cloudflare Workers, and D1.
 
+Framework topics (with snippets from this folder) live in [`../../docs/README.md`](../../docs/README.md).
+
 ## Requirements
 
 - Bun

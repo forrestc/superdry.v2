@@ -6,6 +6,8 @@ Superdry v2 is a modern, server-first fullstack framework designed for the 2026 
 
 Built specifically for **Cloudflare Workers + D1**, Superdry v2 uses **CoffeeScript** to provide a unified, low-token-usage DSL for logic, UI, and styling.
 
+**Documentation:** [docs/README.md](docs/README.md) (topics with code from `examples/todomvc`).
+
 ---
 
 ## 🚀 The Philosophy: Why v2?
@@ -17,50 +19,25 @@ Built specifically for **Cloudflare Workers + D1**, Superdry v2 uses **CoffeeScr
 
 ---
 
-## ⚠️ Current Example Status (Important)
+## ⚠️ Current example: TodoMVC
 
-`examples/todomvc` currently ships in a **working server-rendered mode with Turbo partial updates** and a **Coffee-first authoring workflow**.
+[`examples/todomvc`](examples/todomvc) is the reference app. It ships with:
 
-- **What it does now**
-  - No JSON API is used for CRUD.
-  - Forms post to the Worker, the Worker updates D1, then returns `303 See Other`.
-  - Browser follows the redirect and reloads the full page (`POST -> 303 -> GET`).
-- **What it does not do yet**
-  - No Turbo/HTMX-style partial HTML replacement.
-  - No in-place fragment swap from server-returned HTML snippets.
-- **Where code currently runs**
-  - Worker runtime entry is `examples/todomvc/src/index.js` (generated build artifact).
-  - Source of truth lives in `examples/todomvc/coffee/*.coffee`.
-  - Use `bun run build:coffee` or `bun run watch:coffee` to regenerate `src/index.js`.
+- **Server-rendered HTML** on **`GET /`** (layout, list, forms).
+- **No JSON API** for CRUD; handlers use **Drizzle + D1** directly.
+- **Turbo Streams** for mutations: **`POST /todos`**, **`PATCH /todos/:id/toggle`**, **`DELETE /todos/:id`** return **`text/vnd.turbo-stream.html`** that updates fragments by DOM id (see [docs/turbo-streams.md](docs/turbo-streams.md)).
+- **Coffee-first** sources under **`examples/todomvc/coffee/`**; **`bun run build:coffee`** (or **`watch:coffee`**) produces **`examples/todomvc/src/app.js`**, the Worker **`main`** in `wrangler.toml`.
 
 ---
 
-## 🗺️ Roadmap to True HTML-over-the-Wire
+## 🗺️ Roadmap (remaining polish)
 
-The goal is to keep the **No-API** rule while replacing full-page reloads with server-rendered partial HTML updates.
+The TodoMVC example already uses **HTML-over-the-wire** via Turbo Streams. Possible next steps:
 
-1. **Introduce fragment boundaries**
-   - Split page rendering into reusable fragments (todo list, counter/footer, filter state).
-   - Give each fragment stable DOM IDs/targets.
-2. **Add partial response endpoints**
-   - Keep `POST /todos`, `POST /todos/:id/toggle`, `POST /todos/:id/delete`.
-   - For progressive enhancement:
-     - If request is a normal form post, continue `303` redirect.
-     - If request is a Turbo-enhanced request, return Turbo-friendly HTML responses instead.
-3. **Adopt `node-turbo` as the transport layer**
-   - Add `node-turbo` to the TodoMVC example and ship Turbo in progressive-enhancement mode.
-   - Use Turbo Frames/Streams conventions for server-rendered updates.
-   - Keep the protocol HTML-only (no JSON API backchannel).
-4. **Wire client-side enhancement (small JS only)**
-   - Initialize Turbo on the client for navigation/form enhancement.
-   - Apply server-returned Turbo frame/stream updates to target regions without full navigation.
-   - Preserve non-JS fallback behavior.
-5. **Reconnect Coffee/Superdry runtime path**
-   - Move rendering/store logic from ad-hoc `src/index.js` into framework-driven Coffee components.
-   - Ensure Worker bundling supports the Coffee entry path cleanly.
-6. **Lock behavior with tests**
-   - Add Worker integration tests for add/toggle/delete/filter in both fallback and enhanced modes.
-   - Verify no JSON endpoint is introduced and partial responses remain HTML-only.
+- **Progressive enhancement** — explicit non-Turbo fallbacks (for example **`303`** redirects) where you want bare form posts without JS.
+- **Turbo Frames** — finer-grained navigation and lazy regions, still HTML-only.
+- **Tests** — Worker integration tests for add/toggle/delete/filter; assert no JSON mutation endpoints.
+- **Framework vs example** — keep squeezing generic pieces into `superdry` only when multiple apps need them (see [`.cursor/rules/superdry-workflow.mdc`](.cursor/rules/superdry-workflow.mdc)).
 
 ---
 
@@ -69,37 +46,34 @@ The goal is to keep the **No-API** rule while replacing full-page reloads with s
 - **Runtime**: Cloudflare Workers
 - **Database**: Cloudflare D1 (SQLite)
 - **Engine**: Bun (Build tool & Loader)
-- **Logic/UI**: CoffeeScript 2 + Preact
+- **Logic/UI**: CoffeeScript 2 + Preact (Preact/theme proxy optional; TodoMVC uses HTML string themes)
 - **ORM**: Drizzle (with native D1 driver)
-- **CSS**: Tailwind v4 (via Theme Proxy)
+- **CSS**: Tailwind (via CDN in the example; class map on the theme)
 
 ---
 
 ## Superdry Runtime API
 
-`superdry` now exposes a higher-level runtime API for worker apps:
+`superdry` exposes a runtime API for Worker apps:
 
-- `newApp(config)` - worker request router + Turbo/PRG response helpers
-- `createComponent(renderFn)` - small component/fragment wrapper
-- `createTheme(themeDef)` - theme proxy creator
+- `newApp(config)` — request router, `GET /` page pipeline, `app.route` mounting, `res.stream` Turbo helper
+- `createComponent(renderFn)` — fragment / page renderer
+- `createTheme(themeDef)` — HTML tag proxy + `classes` map (from `superdry/html`)
 
-Minimal Todo-style usage:
+TodoMVC-style wiring is in [docs/app-and-routing.md](docs/app-and-routing.md). Minimal shape:
 
-```js
-import { newApp, createComponent, createTheme } from "superdry";
+```coffee
+import { newApp } from 'superdry'
 
-const theme = createTheme({ app: "min-h-screen" });
-const renderPage = createComponent(({ data, state }) => `<main class="${state.theme.app}">...</main>`);
+app = newApp
+  parseState: ({ url }) ->
+    filter: url.searchParams.get('filter') ? 'all'
+  loadPageData: (app) ->
+    { todos: [] }
+  renderPage: ({ app, data }) ->
+    "<html><body>#{data.todos.length} todos</body></html>"
 
-export default newApp({
-  parseState: ({ url }) => ({ filter: url.searchParams.get("filter") ?? "all", theme }),
-  loadPageData: async ({ env, state }) => ({ todos: await fetchTodos(env.DB, state.filter) }),
-  renderPage,
-  routes: [
-    { method: "POST", path: "/todos", handler: addTodo },
-    { method: "POST", path: "/todos/:id/toggle", handler: toggleTodo },
-  ],
-});
+export default app
 ```
 
 ---
@@ -109,20 +83,33 @@ export default newApp({
 ```text
 .
 ├── src/
-│   └── superdry.js         # The Core Engine (Theme Proxy & Store Logic)
+│   ├── superdry.js       # Core: router, streams, components, optional Preact helpers
+│   ├── html.js           # HTML theme / escaping
+│   ├── model.js          # Drizzle re-exports for apps
+│   └── coffee-build.js   # Coffee compile + Bun bundle helper
+├── docs/                 # Topic documentation (TodoMVC-sourced examples)
 ├── examples/todomvc/
 │   ├── coffee/
-│   │   ├── schema.coffee   # Drizzle Database Schema
-│   │   ├── theme.coffee    # Theme + HTML components
-│   │   ├── app.coffee      # Routes + app wiring
-│   │   └── index.coffee    # Coffee bundle entry
-│   ├── src/index.js        # Generated Worker entry used by Wrangler
-│   ├── wrangler.toml       # Cloudflare Config
-│   ├── drizzle.config.ts   # Database Migration Config
-│   ├── schema.sql          # D1 bootstrap schema for local/remote
+│   │   ├── app.coffee           # newApp + export default
+│   │   ├── controllers/         # createRoute groups
+│   │   ├── models/              # Drizzle table + queries
+│   │   └── themes/              # createTheme + components
+│   ├── scripts/
+│   │   ├── build-coffee.mjs
+│   │   └── watch-coffee.mjs
+│   ├── src/app.js               # Generated Worker bundle (after build:coffee)
+│   ├── wrangler.toml
+│   ├── drizzle.config.ts
+│   ├── schema.sql
 │   └── package.json
-└── package.json            # Root Library Config
+└── package.json          # Library package
 ```
+
+---
+
+## Contributing
+
+Agent and contributor conventions live in [`.cursor/rules/superdry-workflow.mdc`](.cursor/rules/superdry-workflow.mdc); in Cursor this project rule is loaded automatically (`alwaysApply: true`).
 
 ---
 
@@ -145,7 +132,7 @@ cd examples/todomvc
 bun run watch:coffee
 ```
 
-Edit files under `examples/todomvc/coffee/` and the watcher will regenerate `examples/todomvc/src/index.js`.
+Edit files under `examples/todomvc/coffee/`; the watcher rebuilds `examples/todomvc/src/app.js`. For a one-shot build, use `bun run build:coffee`.
 
 ---
 

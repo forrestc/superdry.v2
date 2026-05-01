@@ -1,0 +1,25 @@
+---
+description: Superdry purpose, framework vs examples, extract-to-framework, hide stack details, update docs with examples
+alwaysApply: true
+---
+
+# Superdry workflow
+
+**Purpose:** Superdry v2 is server-first, **no-API**, one language (CoffeeScript), minimal boilerplate, for **Workers + D1**—Phoenix-ish statefulness, Hotwire-style HTML-over-the-wire. **Superdry** means **application code** stays extremely DRY; framework internals may be more verbose if that keeps project code short and uniform.
+
+## Framework vs examples
+
+- **Framework** (`src/`, published package): shared building blocks for many apps (router/app factory, HTTP/Turbo-friendly helpers, components/themes, store contracts). May be **less DRY** internally if it improves APIs and keeps **example/app code super DRY**.
+- **Examples** (`examples/`): **project-specific logic only**, still written DRYly. Do not generalize one-off demo code into the framework unless many apps need it.
+
+## Squeeze by iterating
+
+After a pattern works, **squeeze**: move generic pieces into the framework behind a clear API, then simplify the example again. Expect **multiple rounds**; examples should read like a small product, not low-level tutorial code.
+
+## Hide stack details in the public story
+
+Teach **models, controllers, routes, components, themes, fragments** via docs/examples. Keep Drizzle, Turbo transport, Wrangler/D1 mechanics **inside** the framework or thin adapters. Readers should not need stack trivia to follow examples.
+
+## Docs follow changes
+
+Every meaningful change—especially big features—**update or add** framework documentation with **concrete examples**. Prefer **structured** docs (topics/pages). Root `README.md` stays the entry (vision, quick start); link deeper docs as they grow. Undocumented features are incomplete.
