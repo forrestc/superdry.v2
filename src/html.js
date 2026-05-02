@@ -55,6 +55,42 @@ const normalizeClassName = (value, themeClasses) => {
   return tokens.map((token) => themeClasses[token] ?? token).join(" ");
 };
 
+/** Maps React-style / camelCase props to real HTML attribute names when simple camel→kebab would be wrong. */
+const CAMEL_CASE_ATTR_ALIASES = {
+  allowFullScreen: "allowfullscreen",
+  autoCapitalize: "autocapitalize",
+  autoComplete: "autocomplete",
+  autoCorrect: "autocorrect",
+  autoFocus: "autofocus",
+  autoPlay: "autoplay",
+  contentEditable: "contenteditable",
+  crossOrigin: "crossorigin",
+  dateTime: "datetime",
+  enterKeyHint: "enterkeyhint",
+  formNoValidate: "formnovalidate",
+  htmlFor: "for",
+  inputMode: "inputmode",
+  maxLength: "maxlength",
+  minLength: "minlength",
+  noValidate: "novalidate",
+  readOnly: "readonly",
+  spellCheck: "spellcheck",
+  srcSet: "srcset",
+};
+
+/**
+ * Theme props may use camelCase (`dataElemLoading`); serialized HTML uses kebab-case data / hyphen rules.
+ * @param {string} key
+ * @returns {string}
+ */
+export const propKeyToHtmlAttr = (key) => {
+  if (Object.hasOwn(CAMEL_CASE_ATTR_ALIASES, key)) {
+    return CAMEL_CASE_ATTR_ALIASES[key];
+  }
+  if (!/[A-Z]/.test(key)) return key;
+  return key.replace(/[A-Z]/g, (ch) => `-${ch.toLowerCase()}`);
+};
+
 export const createHtmlTheme = (themeDef = {}) => {
   const themeClasses = themeDef.classes ?? {};
   const callbackCapture = [];
@@ -107,10 +143,11 @@ export const createHtmlTheme = (themeDef = {}) => {
     for (const [key, value] of Object.entries(props)) {
       if (key === "class" || key === "className") continue;
       if (value === null || value === undefined || value === false) continue;
+      const attrName = propKeyToHtmlAttr(key);
       if (value === true) {
-        attrs.push(key);
+        attrs.push(attrName);
       } else {
-        attrs.push(`${key}="${escapeHtml(value)}"`);
+        attrs.push(`${attrName}="${escapeHtml(value)}"`);
       }
     }
 
@@ -126,10 +163,25 @@ export const createHtmlTheme = (themeDef = {}) => {
     return makeRaw(html);
   };
 
+  /**
+   * One `<script type="module">` with `import` lines for each URL. URLs may be passed
+   * as separate args or a single array; null/undefined/empty strings are skipped.
+   * @param {...string|string[]} urls
+   */
+  const importScript = (...urls) => {
+    const list = urls
+      .flatMap((u) => (Array.isArray(u) ? u : [u]))
+      .filter((u) => u != null && String(u).trim() !== "");
+    if (list.length === 0) return makeRaw("");
+    const body = list.map((u) => `import ${JSON.stringify(String(u).trim())};`).join("\n");
+    return renderTag("script", { type: "module" }, makeRaw(body));
+  };
+
   const htmlTheme = new Proxy(
     {
       ...themeDef,
       raw: (html) => makeRaw(html),
+      importScript,
     },
     {
       get(target, prop) {

@@ -1,8 +1,9 @@
-import { createTheme } from 'superdry'
+import { createTheme, createComponent } from 'superdry'
 
 export theme = createTheme
   tailwindScript: 'https://cdn.tailwindcss.com'
   turboScript: 'https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.23/+esm'
+  clientScript: '/superdry-client.js'
   classes:
     body: 'm-0 bg-gray-100'
     container: 'max-w-[620px] mx-auto mt-10 px-4'
@@ -20,5 +21,25 @@ export theme = createTheme
     filters: 'flex gap-2'
     filterLink: 'no-underline text-inherit px-2 py-1'
     filterLinkActive: 'border rounded border-red-900/35'
+
+export layout = createComponent (state, theme, bodyOrFn) ->
+  inner =
+    if typeof bodyOrFn is 'function'
+      bodyOrFn()
+    else if bodyOrFn?.mainHtml?
+      bodyOrFn.mainHtml
+    else
+      ''
+  '<!doctype html>' +
+    theme.html { lang: 'en' }, ->
+      theme.head ->
+        theme.meta { charset: 'utf-8' }
+        theme.meta { name: 'viewport', content: 'width=device-width, initial-scale=1' }
+        theme.title 'Superdry TodoMVC'
+        theme.script { src: theme.tailwindScript }
+        theme.importScript theme.turboScript, theme.clientScript
+
+      theme.body { className: 'body' }, ->
+        theme.raw(String(inner))
 
 export * from './components'

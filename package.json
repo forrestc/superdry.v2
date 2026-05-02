@@ -6,9 +6,15 @@
     ".": "./src/superdry.js",
     "./html": "./src/html.js",
     "./coffee-build": "./src/coffee-build.js",
-    "./model": "./src/model.js"
+    "./model": "./src/model.js",
+    "./client": "./src/superdry-client.js"
   },
   "type": "module",
+  "scripts": {
+    "embed-client": "node scripts/embed-superdry-client.mjs",
+    "prepack": "node scripts/embed-superdry-client.mjs",
+    "prepare": "node scripts/embed-superdry-client.mjs"
+  },
   "dependencies": {
     "@preact/signals": "^1.2.2",
     "coffeescript": "^2.7.0",

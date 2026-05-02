@@ -32,7 +32,14 @@ Only **`GET /`** triggers **`loadPageData`** then **`renderPage`**. **`renderPag
     todos: todoItems
     activeCount: activeCount
   renderPage: ({ app, data }) ->
-    layout app.state, app.state.theme, data
+    layout app.state, app.state.theme, ->
+      main app.state, app.state.theme, data
+```
+
+Imports at the top of the same file include **`main`** from **`./themes`** alongside **`layout`** and **`theme`**:
+
+```coffee
+import { layout, theme, main } from './themes'
 ```
 
 **`app.db`** is Drizzle on **`env.DB`** by default, with **`db.eq`**, **`db.desc`**, **`db.sql`** attached.

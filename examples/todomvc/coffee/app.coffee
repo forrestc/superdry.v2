@@ -1,9 +1,10 @@
 import { newApp } from 'superdry'
 import { todoRoute } from './controllers/todo'
 import { listTodos, countActiveTodos, normalizeFilter } from './models/todo'
-import { layout, theme } from './themes'
+import { layout, theme, main } from './themes'
 
 app = newApp
+  serveSuperdryClient: true
   parseState: ({ url }) ->
     filter: normalizeFilter(url.searchParams.get('filter') ? 'all')
     theme: theme
@@ -12,7 +13,8 @@ app = newApp
     todos: todoItems
     activeCount: activeCount
   renderPage: ({ app, data }) ->
-    layout app.state, app.state.theme, data
+    layout app.state, app.state.theme, ->
+      main app.state, app.state.theme, data
 
 app.route '/todos', todoRoute
 

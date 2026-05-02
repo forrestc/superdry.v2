@@ -1,6 +1,9 @@
 # macOS / editor
 .DS_Store
 
+# generated browser client embed (run `npm run embed-client` or `npm install`)
+src/superdry-client-embedded.js
+
 # dependencies
 node_modules/
 examples/todomvc/node_modules/

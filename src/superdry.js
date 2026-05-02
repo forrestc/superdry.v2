@@ -5,6 +5,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { desc, eq, sql } from 'drizzle-orm';
 import { integer, sqliteTable, text as sqliteText } from 'drizzle-orm/sqlite-core';
 import { ensureTheme } from './html.js';
+import { SUPERDRY_CLIENT_SOURCE } from './superdry-client-embedded.js';
 export {
   ensureTheme,
   isTheme,
@@ -394,9 +395,25 @@ export const newApp = (config) => {
       return appInstance;
     },
     async fetch(request, env) {
-      const routes = normalizeRoutes(routeDefs);
       const url = new URL(request.url);
+      const pathname = url.pathname;
       const originalMethod = request.method.toUpperCase();
+
+      const serveClient = config.serveSuperdryClient;
+      if (serveClient && originalMethod === 'GET') {
+        const mountPath =
+          typeof serveClient === 'string' ? serveClient : '/superdry-client.js';
+        if (pathname === mountPath) {
+          return new Response(SUPERDRY_CLIENT_SOURCE, {
+            headers: {
+              'content-type': 'application/javascript; charset=utf-8',
+              'cache-control': 'public, max-age=86400',
+            },
+          });
+        }
+      }
+
+      const routes = normalizeRoutes(routeDefs);
       let parsedFormData;
       const getFormData = async () => {
         if (!parsedFormData) {
@@ -405,7 +422,6 @@ export const newApp = (config) => {
         return parsedFormData;
       };
       const method = await resolveRequestMethod(request, getFormData);
-      const pathname = url.pathname;
       const query = Object.fromEntries(url.searchParams.entries());
       const themes = config.themes ?? {};
       const getDefaultThemeName = config.getDefaultThemeName;
