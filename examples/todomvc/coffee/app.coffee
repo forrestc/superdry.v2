@@ -1,12 +1,14 @@
 import { newApp } from 'superdry'
-import { todoRoute, renderTodoToggle } from './controllers/todo'
+import { todoRoute, renderTodoCreate, renderTodoToggle, renderTodoDelete } from './controllers/todo'
 import { listTodos, countActiveTodos, normalizeFilter } from './models/todo'
 import { layout, theme, main } from './themes'
 
 app = newApp
   serveSuperdryClient: true
   broadcasts:
+    create: renderTodoCreate
     toggle: renderTodoToggle
+    delete: renderTodoDelete
   parseState: ({ url }) ->
     filter: normalizeFilter(url.searchParams.get('filter') ? 'all')
     theme: theme

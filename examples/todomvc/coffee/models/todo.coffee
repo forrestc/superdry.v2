@@ -23,6 +23,7 @@ export countActiveTodos = (db) ->
 
 export createTodo = (db, text) ->
   [insertedTodo] = await db.insert(todos).values({ text, completed: false }).returning()
+  broadcast 'create', insertedTodo
   insertedTodo
 
 export findTodoById = (db, id) ->
@@ -45,4 +46,7 @@ export toggleTodoCompleted = (db, id) ->
   { current, updated }
 
 export deleteTodoById = (db, id) ->
+  deleted = { id: Number(id) }
   await db.delete(todos).where(db.eq(todos.id, Number(id)))
+  broadcast 'delete', deleted
+  deleted
