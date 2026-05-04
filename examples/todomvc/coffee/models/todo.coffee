@@ -1,4 +1,5 @@
 import { integer, sqliteTable, text, count } from 'superdry/model'
+import { broadcast } from 'superdry'
 
 FILTERS = new Set ['all', 'active', 'completed']
 
@@ -10,12 +11,7 @@ export todos = sqliteTable 'todos',
 export normalizeFilter = (filter) ->
   if FILTERS.has(filter) then filter else 'all'
 
-export listTodos = (db, filter = 'all') ->
-  selectedFilter = normalizeFilter(filter)
-  if selectedFilter is 'active'
-    return db.select().from(todos).where(db.eq(todos.completed, false)).orderBy(db.desc(todos.id))
-  if selectedFilter is 'completed'
-    return db.select().from(todos).where(db.eq(todos.completed, true)).orderBy(db.desc(todos.id))
+export listTodos = (db) ->
   db.select().from(todos).orderBy(db.desc(todos.id))
 
 export countActiveTodos = (db) ->
@@ -45,6 +41,7 @@ export toggleTodoCompleted = (db, id) ->
   current = await findTodoById(db, id)
   return null unless current
   updated = await setTodoCompleted(db, id, !current.completed)
+  broadcast 'toggle', updated
   { current, updated }
 
 export deleteTodoById = (db, id) ->

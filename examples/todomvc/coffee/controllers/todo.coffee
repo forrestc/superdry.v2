@@ -5,6 +5,16 @@ import {
 import { createRoute } from 'superdry'
 import { todoForm, todoRow, activeCountText } from '../themes'
 
+export renderTodoToggle = (app, res, updated) ->
+  filter = normalizeFilter String(app.state.filter)
+  activeCount = await countActiveTodos(app.db)
+
+  res.stream
+    .update 'active-count', activeCountText app.state, app.state.theme, { activeCount }
+
+  if updated
+    res.stream.replace "todo-#{updated.id}", todoRow app.state, app.state.theme, { todo: updated, filter }
+
 export todoRoute = createRoute (r) ->
   r.post '/', (app, req, res) ->
     text = String(req.formData.get('text') ? '').trim()
@@ -21,25 +31,12 @@ export todoRoute = createRoute (r) ->
       .update 'active-count', activeCountText app.state, app.state.theme, { activeCount }
       .replace 'new-todo-form', todoForm app.state, app.state.theme, { filter }
 
-    if filter isnt 'completed' and insertedTodo
+    if insertedTodo
       res.stream.prepend 'todo-list', todoRow app.state, app.state.theme, { todo: insertedTodo, filter }
 
   r.patch '/:id/toggle', (app, req, res) ->
-    filter = normalizeFilter String(req.query.filter ? app.state.filter)
     { updated } = await toggleTodoCompleted(app.db, req.params.id)
-    activeCount = await countActiveTodos(app.db)
-    isVisible =
-      filter is 'all' or
-      (filter is 'active' and !updated?.completed) or
-      (filter is 'completed' and updated?.completed)
-
-    res.stream
-      .update 'active-count', activeCountText app.state, app.state.theme, { activeCount }
-
-    if isVisible
-      res.stream.replace "todo-#{req.params.id}", todoRow app.state, app.state.theme, { todo: updated, filter }
-    else
-      res.stream.remove "todo-#{req.params.id}"
+    await renderTodoToggle app, res, updated
 
   r.delete '/:id', (app, req, res) ->
     await deleteTodoById(app.db, req.params.id)

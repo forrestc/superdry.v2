@@ -6,12 +6,22 @@ import { desc, eq, sql } from 'drizzle-orm';
 import { integer, sqliteTable, text as sqliteText } from 'drizzle-orm/sqlite-core';
 import { ensureTheme } from './html.js';
 import { SUPERDRY_CLIENT_SOURCE } from './superdry-client-embedded.js';
+import {
+  BROADCAST_PATH,
+  createBroadcast,
+  createBroadcastContext,
+  createCloudflareDoBroadcastAdapter,
+  createInMemoryBroadcastAdapter,
+  publishQueuedBroadcasts,
+  runWithBroadcastContext,
+} from './broadcast/index.js';
 export {
   ensureTheme,
   isTheme,
   createTheme as createHtmlTheme,
   ensureTheme as ensureHtmlTheme,
 } from './html.js';
+export * from './broadcast/index.js';
 
 const TYPE_BUILDER_SYMBOL = Symbol('superdryTypeBuilder');
 
@@ -230,12 +240,31 @@ const redirectResponse = (path = '/') =>
 const isTurboRequest = (request) =>
   (request.headers.get('accept') ?? '').includes('text/vnd.turbo-stream.html');
 
-const turboStreamResponse = (stream) =>
-  new Response(stream.render(), {
+const turboStreamHtmlResponse = (html) =>
+  new Response(html, {
     headers: { 'content-type': 'text/vnd.turbo-stream.html; charset=utf-8' },
   });
 
 const STREAM_RESPONSE_SYMBOL = Symbol('superdryStreamResponse');
+const defaultBroadcastAdapter = createInMemoryBroadcastAdapter();
+
+const resolveBroadcastAdapter = async (config, { request, env, url, query }) => {
+  if (typeof config.getBroadcastAdapter === 'function') {
+    return config.getBroadcastAdapter({ request, env, url, query });
+  }
+  if (config.broadcastAdapter) return config.broadcastAdapter;
+  if (env?.SUPERDRY_BROADCAST) {
+    return createCloudflareDoBroadcastAdapter();
+  }
+  return defaultBroadcastAdapter;
+};
+
+const resolveBroadcastChannel = async (config, context) => {
+  if (typeof config.getBroadcastChannel === 'function') {
+    return config.getBroadcastChannel(context);
+  }
+  return config.broadcastChannel ?? 'superdry';
+};
 
 const createStreamResponder = () => {
   let stream;
@@ -270,7 +299,9 @@ const createStreamResponder = () => {
   streamApi.remove = chainMethod('remove');
   streamApi.before = chainMethod('before');
   streamApi.after = chainMethod('after');
-  streamApi.toResponse = () => turboStreamResponse(ensureStream());
+  streamApi.hasContent = () => Boolean(stream);
+  streamApi.toHtml = () => ensureStream().render();
+  streamApi.toResponse = () => turboStreamHtmlResponse(streamApi.toHtml());
   streamApi[STREAM_RESPONSE_SYMBOL] = true;
 
   return streamApi;
@@ -285,6 +316,10 @@ const resolveRequestMethod = async (request, getFormData) => {
   const headerOverride = request.headers.get('x-http-method-override');
   if (headerOverride) {
     return headerOverride.toUpperCase();
+  }
+
+  if (!isFormLikeContentType(request)) {
+    return method;
   }
 
   try {
@@ -310,6 +345,21 @@ const isFormLikeContentType = (request) => {
     contentType.includes('application/x-www-form-urlencoded') ||
     contentType.includes('multipart/form-data')
   );
+};
+
+const readJsonBody = async (request) => {
+  try {
+    return await request.json();
+  } catch {
+    return null;
+  }
+};
+
+const findBroadcastHandler = (config, event) => {
+  const handlers = config.broadcasts ?? {};
+  if (event && typeof handlers[event] === 'function') return handlers[event];
+  if (typeof config.onBroadcast === 'function') return config.onBroadcast;
+  return undefined;
 };
 
 const compilePathPattern = (pathPattern) => {
@@ -407,7 +457,7 @@ export const newApp = (config) => {
           return new Response(SUPERDRY_CLIENT_SOURCE, {
             headers: {
               'content-type': 'application/javascript; charset=utf-8',
-              'cache-control': 'public, max-age=86400',
+              'cache-control': 'no-cache',
             },
           });
         }
@@ -423,6 +473,29 @@ export const newApp = (config) => {
       };
       const method = await resolveRequestMethod(request, getFormData);
       const query = Object.fromEntries(url.searchParams.entries());
+      const broadcastAdapter = await resolveBroadcastAdapter(config, { request, env, url, query });
+      const broadcastChannel = await resolveBroadcastChannel(config, { request, env, url, query });
+      const clientId =
+        request.headers.get('x-superdry-client-id') ??
+        url.searchParams.get('clientId') ??
+        undefined;
+      const broadcastContext = createBroadcastContext({
+        adapter: broadcastAdapter,
+        channel: broadcastChannel,
+        clientId,
+        env,
+      });
+      const broadcastService = createBroadcast(broadcastAdapter, {
+        channel: broadcastChannel,
+        clientId,
+        env,
+      });
+
+      if (method === 'GET' && pathname === BROADCAST_PATH) {
+        const channel = query.channel ?? broadcastChannel;
+        return broadcastService.subscribe({ channel, clientId });
+      }
+
       const themes = config.themes ?? {};
       const getDefaultThemeName = config.getDefaultThemeName;
       const fallbackThemeName =
@@ -441,6 +514,7 @@ export const newApp = (config) => {
           env,
           url,
           query,
+          broadcast: broadcastService,
           theme: selectedTheme,
           themeName,
           themes,
@@ -457,6 +531,7 @@ export const newApp = (config) => {
         env,
         db,
         state,
+        broadcast: broadcastService,
         themes,
       };
       if (state.theme === undefined && selectedTheme !== undefined) {
@@ -498,14 +573,43 @@ export const newApp = (config) => {
         notFound: () => new Response('Not Found', { status: 404 }),
       };
 
+      if (method === 'POST' && pathname === `${BROADCAST_PATH}/sync`) {
+        const message = await readJsonBody(request);
+        const handler = findBroadcastHandler(config, message?.event);
+        if (!handler) {
+          return new Response(null, { status: 204 });
+        }
+
+        const routeResult = await handler(app, res, message?.payload, req, message);
+        const resultStream = routeResult?.[STREAM_RESPONSE_SYMBOL]
+          ? routeResult
+          : stream.hasContent()
+            ? stream
+            : undefined;
+        if (!resultStream) {
+          return new Response(null, { status: 204 });
+        }
+        return turboStreamHtmlResponse(resultStream.toHtml());
+      }
+
       for (const route of routes) {
         if (route.method !== method) continue;
         const params = matchPath(route._compiled, pathname);
         if (!params) continue;
         req.params = params;
-        const routeResult = await route.handler(app, req, res);
-        if (routeResult?.[STREAM_RESPONSE_SYMBOL]) {
-          return routeResult.toResponse();
+        const routeResult = await runWithBroadcastContext(
+          broadcastContext,
+          () => route.handler(app, req, res),
+        );
+        const resultStream = routeResult?.[STREAM_RESPONSE_SYMBOL]
+          ? routeResult
+          : stream.hasContent()
+            ? stream
+            : undefined;
+        if (resultStream) {
+          const streamHtml = resultStream.toHtml();
+          await publishQueuedBroadcasts(broadcastContext, streamHtml);
+          return turboStreamHtmlResponse(streamHtml);
         }
         return routeResult;
       }

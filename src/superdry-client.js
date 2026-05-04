@@ -143,3 +143,68 @@
   document.addEventListener("turbo:submit-start", onSubmitStart);
   document.addEventListener("turbo:submit-end", onSubmitEnd);
 })();
+
+(function initSuperdryBroadcast() {
+  if (globalThis.__superdryBroadcastInstalled) return;
+  globalThis.__superdryBroadcastInstalled = true;
+
+  const BROADCAST_PATH = "/_superdry/broadcast";
+
+  function randomId() {
+    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  const clientId = randomId();
+
+  document.addEventListener("turbo:before-fetch-request", (ev) => {
+    const headers = ev.detail?.fetchOptions?.headers;
+    if (headers instanceof Headers) {
+      headers.set("x-superdry-client-id", clientId);
+    } else if (headers) {
+      headers["x-superdry-client-id"] = clientId;
+    }
+  });
+
+  if (!("EventSource" in globalThis)) return;
+
+  const url = new URL(BROADCAST_PATH, window.location.href);
+  url.searchParams.set("clientId", clientId);
+
+  async function renderBroadcast(message) {
+    const syncUrl = new URL(`${BROADCAST_PATH}/sync`, window.location.href);
+    for (const [key, value] of new URLSearchParams(window.location.search)) {
+      syncUrl.searchParams.set(key, value);
+    }
+
+    const response = await fetch(syncUrl, {
+      method: "POST",
+      headers: {
+        "accept": "text/vnd.turbo-stream.html",
+        "content-type": "application/json",
+        "x-superdry-client-id": clientId,
+      },
+      body: JSON.stringify(message),
+    });
+    if (!response.ok) return;
+
+    const html = await response.text();
+    if (html && window.Turbo?.renderStreamMessage) {
+      window.Turbo.renderStreamMessage(html);
+    }
+  }
+
+  const source = new EventSource(url);
+  source.addEventListener("superdry:broadcast", (ev) => {
+    let message;
+    try {
+      message = JSON.parse(ev.data);
+    } catch {
+      return;
+    }
+    if (!message?.event) return;
+    renderBroadcast(message).catch((err) => {
+      console.warn("[superdry-client] broadcast sync failed:", err);
+    });
+  });
+})();

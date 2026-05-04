@@ -12,11 +12,11 @@ Source: [`examples/todomvc/coffee/controllers/todo.coffee`](../examples/todomvc/
 
 ---
 
-## Toggle: update count, then replace or remove the row
+## Toggle: update count, then replace the row
 
 1. Run the model, read **`updated`** and the current **`filter`**.
-2. Decide if the row should still appear under this filter.
-3. **`res.stream.update`** the footer count; **`replace`** the **`li`** with a new `todoRow`, or **`remove`** it.
+2. **`res.stream.update`** the footer count.
+3. **`replace`** the **`li`** with a new `todoRow`. Filtered views keep hidden rows in the DOM, so the target exists even when the row is not currently visible.
 
 Imports at the top of the controller wire the **same** theme components used on the full page:
 
@@ -30,21 +30,8 @@ The toggle handler:
 ```coffee
 # examples/todomvc/coffee/controllers/todo.coffee
   r.patch '/:id/toggle', (app, req, res) ->
-    filter = normalizeFilter String(req.query.filter ? app.state.filter)
     { updated } = await toggleTodoCompleted(app.db, req.params.id)
-    activeCount = await countActiveTodos(app.db)
-    isVisible =
-      filter is 'all' or
-      (filter is 'active' and !updated?.completed) or
-      (filter is 'completed' and updated?.completed)
-
-    res.stream
-      .update 'active-count', activeCountText app.state, app.state.theme, { activeCount }
-
-    if isVisible
-      res.stream.replace "todo-#{req.params.id}", todoRow app.state, app.state.theme, { todo: updated, filter }
-    else
-      res.stream.remove "todo-#{req.params.id}"
+    await renderTodoToggle app, res, req.params.id, updated
 ```
 
 **Id match:** `replace` targets **`"todo-#{req.params.id}"`**, the same pattern as **`todoRow`**’s **`id: "todo-#{data.todo.id}"`**.

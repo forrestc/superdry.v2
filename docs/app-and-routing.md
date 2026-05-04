@@ -26,7 +26,7 @@ Only **`GET /`** triggers **`loadPageData`** then **`renderPage`**. **`renderPag
 # examples/todomvc/coffee/app.coffee (excerpt)
   loadPageData: (app) ->
     [todoItems, activeCount] = await Promise.all [
-      listTodos(app.db, app.state.filter)
+      listTodos(app.db)
       countActiveTodos(app.db)
     ]
     todos: todoItems
@@ -83,5 +83,6 @@ So you get **`POST /todos/`**, **`PATCH /todos/:id/toggle`**, **`DELETE /todos/:
 | **`req.isTurbo`** | `true` when the client accepts Turbo Stream responses |
 | **`res.stream`** | Chain **`append` / `prepend` / `replace` / `update` / `remove`**, then **return** it — see [Turbo Streams](turbo-streams.md) |
 | **`res.redirect(path)`** | **`303`** with **`Location`** |
+| **`app.broadcast`** | Adapter-backed publish/subscribe helpers; model-level `broadcast(...)` usually keeps app code smaller — see [Broadcast](broadcast.md) |
 
 **Method override:** **`theme.form { method: 'patch' }`** (or **`delete`**) submits as **`POST`** with **`_method`**; the router promotes that to **`PATCH`** / **`DELETE`**. Details in [HTML themes and components](html-themes-and-components.md).

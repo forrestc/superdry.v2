@@ -5,7 +5,10 @@ export activeCountText = createComponent (_state, _theme, data) ->
 
 export todoRow = createComponent (_state, theme, data) ->
   actionQuery = "?filter=#{encodeURIComponent(data.filter)}"
-  theme.li { className: 'row', id: "todo-#{data.todo.id}" }, ->
+  isHidden =
+    (data.filter is 'active' and data.todo.completed) or
+    (data.filter is 'completed' and !data.todo.completed)
+  theme.li { className: ['row', isHidden and 'hidden'], id: "todo-#{data.todo.id}" }, ->
     theme.form { dataElemLoading: '..', method: 'patch', action: "/todos/#{data.todo.id}/toggle#{actionQuery}" }, ->
       theme.button { className: 'checkbox', type: 'submit' }, (if data.todo.completed then '✓' else '')
 
