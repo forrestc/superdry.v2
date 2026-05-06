@@ -102,6 +102,21 @@ const isTemplate = (value) =>
 
 const labelSource = (locale = {}) => locale?.labels ?? locale ?? {};
 
+export const createLocale = (locales = {}, options = {}) => {
+  const defaultLang = options.defaultLang ?? Object.keys(locales)[0] ?? DEFAULT_LANG;
+  const defaultLocale = locales[defaultLang] ?? {};
+
+  return (lang = defaultLang) => {
+    const selectedLang = lang && locales[lang] ? lang : defaultLang;
+    return {
+      lang: selectedLang,
+      locale: locales[selectedLang] ?? defaultLocale,
+      defaultLocale,
+      locales,
+    };
+  };
+};
+
 export const labelsFor = (locale = {}, fallbackLocale = {}) => {
   const current = labelSource(locale);
   const fallback = labelSource(fallbackLocale);

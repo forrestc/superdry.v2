@@ -26,6 +26,19 @@ await buildCoffeeProject({
 
 ---
 
+## Locale discovery
+
+If the Coffee source tree has a **`locales/`** folder, `superdry/coffee-build` discovers direct **`.coffee`** files there and bundles them into Superdry's locale state. Prefix the default locale file with **`_`**:
+
+```text
+coffee/locales/_en.coffee
+coffee/locales/zh.coffee
+```
+
+The underscore is only a default marker. The language keys become **`en`** and **`zh`**, so requests like **`/todos?lang=zh`** select Chinese copy. If no file is marked with **`_`**, the first sorted locale file is used as the default.
+
+---
+
 ## npm scripts
 
 From [`examples/todomvc/package.json`](../examples/todomvc/package.json):

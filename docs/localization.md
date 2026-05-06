@@ -6,10 +6,10 @@ Superdry localization stays server-first: pick a language from the request, stor
 
 ## Locale file
 
-Framework-owned validation messages are built into Superdry for supported languages. App-specific words stay in app locale files. TodoMVC keeps English fallback copy in `langs/en.coffee`:
+Framework-owned validation messages are built into Superdry for supported languages. App-specific words stay in app locale files under the conventional `locales/` folder. TodoMVC marks English as the default by prefixing the file name with `_`:
 
 ```coffee
-# examples/todomvc/coffee/langs/en.coffee
+# examples/todomvc/coffee/locales/_en.coffee
 export default
   labels:
     filters:
@@ -19,10 +19,10 @@ export default
     itemsLeft: '${pluralize count, "item"} left'
 ```
 
-Chinese UI copy lives in `langs/zh.coffee`:
+Chinese UI copy lives in `locales/zh.coffee`:
 
 ```coffee
-# examples/todomvc/coffee/langs/zh.coffee
+# examples/todomvc/coffee/locales/zh.coffee
 export default
   labels:
     filters:
@@ -32,33 +32,21 @@ export default
     itemsLeft: '剩余${count}项'
 ```
 
-Both framework and app messages use the same `${...}` placeholder syntax.
+Both framework and app messages use the same `${...}` placeholder syntax. During the Coffee build, Superdry discovers `coffee/locales/*.coffee`, strips the default marker from `_en.coffee`, and registers the locale as `en`.
 
 ---
 
 ## Select by `?lang=zh`
 
-`parseState` runs before `app.db` is wrapped. Superdry uses `state.lang` to choose framework validation messages, while TodoMVC stores `state.locale` for UI copy.
+`parseState` runs before `app.db` is wrapped. Superdry uses `state.lang` to choose framework validation messages, while `state.locale` feeds UI copy. When the Coffee build finds a `locales/` folder, `newApp` automatically merges locale state from `?lang=...`; app state returned from `parseState` still wins when it sets `lang`, `locale`, `defaultLocale`, or `locales` explicitly.
 
 ```coffee
 # examples/todomvc/coffee/app.coffee
-import en from './langs/en'
-import zh from './langs/zh'
-
-LANGS =
-  en: en
-  zh: zh
-
-normalizeLang = (lang) ->
-  if LANGS[lang]? then lang else 'en'
+import { newApp } from 'superdry'
 
 app = newApp
   parseState: ({ url }) ->
-    lang = normalizeLang(url.searchParams.get('lang') ? 'en')
     filter: normalizeFilter(url.searchParams.get('filter') ? 'all')
-    lang: lang
-    locale: LANGS[lang] ? {}
-    defaultLocale: LANGS.en
     theme: theme
 ```
 

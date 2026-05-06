@@ -26,6 +26,12 @@ export * from './controller.js';
 export * from './localization.js';
 export * from './model.js';
 
+let autoLocaleFactory;
+
+export const setAutoLocaleFactory = (factory) => {
+  autoLocaleFactory = typeof factory === 'function' ? factory : undefined;
+};
+
 // --- THEME PROXY ---
 export const createThemeProxy = (themeDef) => {
   return new Proxy(themeDef, {
@@ -365,7 +371,7 @@ export const newApp = (config) => {
         ? requestedThemeName
         : fallbackThemeName;
       const selectedTheme = themeName ? ensureTheme(themes[themeName]) : undefined;
-      const state = config.parseState
+      const parsedState = (config.parseState
         ? await config.parseState({
           request,
           env,
@@ -376,7 +382,11 @@ export const newApp = (config) => {
           themeName,
           themes,
         })
+        : {}) ?? {};
+      const autoLocaleState = autoLocaleFactory
+        ? autoLocaleFactory(parsedState.lang ?? query.lang)
         : {};
+      const state = { ...autoLocaleState, ...parsedState };
       const db =
         (config.getOrm
           ? await config.getOrm({ request, env, url, state })

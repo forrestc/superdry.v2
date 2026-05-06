@@ -16,6 +16,12 @@ const walkCoffeeFiles = async (dir) => {
   return files;
 };
 
+const toImportPath = (fromFile, toFile) => {
+  let relPath = path.relative(path.dirname(fromFile), toFile).replaceAll(path.sep, "/");
+  if (!relPath.startsWith("./") && !relPath.startsWith("../")) relPath = `./${relPath}`;
+  return relPath;
+};
+
 const compileCoffeeTree = async ({ sourceDir, tempBuildDir }) => {
   await rm(tempBuildDir, { recursive: true, force: true });
   await mkdir(tempBuildDir, { recursive: true });
@@ -39,6 +45,64 @@ const compileCoffeeTree = async ({ sourceDir, tempBuildDir }) => {
     await writeFile(outPath, compiled.js, "utf8");
     await writeFile(outMapPath, compiled.v3SourceMap, "utf8");
   }
+};
+
+const discoverLocaleFiles = async ({ sourceDir }) => {
+  const localeDir = path.join(sourceDir, "locales");
+  let entries;
+  try {
+    entries = await readdir(localeDir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  return entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".coffee"))
+    .map((entry) => {
+      const basename = entry.name.replace(/\.coffee$/, "");
+      const isDefault = basename.startsWith("_");
+      const lang = isDefault ? basename.slice(1) : basename;
+      return {
+        lang,
+        isDefault,
+        sourceName: entry.name,
+      };
+    })
+    .filter((locale) => locale.lang)
+    .sort((a, b) => a.sourceName.localeCompare(b.sourceName));
+};
+
+const generateLocaleBootstrap = async ({ sourceDir, tempBuildDir, compiledEntrypoint }) => {
+  const localeFiles = await discoverLocaleFiles({ sourceDir });
+  if (!localeFiles.length) return;
+
+  const bootstrapPath = path.join(tempBuildDir, ".superdry-locales.js");
+  const defaultLang =
+    localeFiles.find((locale) => locale.isDefault)?.lang ??
+    localeFiles[0].lang;
+  const imports = localeFiles.map((locale, index) => {
+    const compiledLocalePath = path.join(tempBuildDir, "locales", locale.sourceName.replace(/\.coffee$/, ".js"));
+    return `import locale${index} from ${JSON.stringify(toImportPath(bootstrapPath, compiledLocalePath))};`;
+  });
+  const localeEntries = localeFiles.map((locale, index) =>
+    `${JSON.stringify(locale.lang)}: locale${index}`
+  );
+
+  await writeFile(
+    bootstrapPath,
+    [
+      `import { createLocale, setAutoLocaleFactory } from "superdry";`,
+      ...imports,
+      ``,
+      `setAutoLocaleFactory(createLocale({ ${localeEntries.join(", ")} }, { defaultLang: ${JSON.stringify(defaultLang)} }));`,
+      ``,
+    ].join("\n"),
+    "utf8",
+  );
+
+  const entrySource = await readFile(compiledEntrypoint, "utf8");
+  const bootstrapImport = `import ${JSON.stringify(toImportPath(compiledEntrypoint, bootstrapPath))};`;
+  await writeFile(compiledEntrypoint, `${bootstrapImport}\n${entrySource}`, "utf8");
 };
 
 const bundleCompiledEntry = async ({ entrypoint, outputDir, expectedOutputFile, target }) => {
@@ -87,6 +151,11 @@ export const buildCoffeeProject = async ({
     await compileCoffeeTree({
       sourceDir: absoluteSourceDir,
       tempBuildDir: absoluteTempBuildDir,
+    });
+    await generateLocaleBootstrap({
+      sourceDir: absoluteSourceDir,
+      tempBuildDir: absoluteTempBuildDir,
+      compiledEntrypoint,
     });
     await bundleCompiledEntry({
       entrypoint: compiledEntrypoint,
