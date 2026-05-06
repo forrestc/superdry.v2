@@ -12,6 +12,7 @@ Framework-owned validation messages are built into Superdry for supported langua
 # examples/todomvc/coffee/locales/_en.coffee
 export default
   labels:
+    title: 'todos'
     filters:
       all: 'All'
       active: 'Active'
@@ -25,6 +26,7 @@ Chinese UI copy lives in `locales/zh.coffee`:
 # examples/todomvc/coffee/locales/zh.coffee
 export default
   labels:
+    title: '待办事项'
     filters:
       all: '全部'
       active: '进行中'

@@ -46,7 +46,7 @@ export todoFooter = createComponent (state, theme, data) ->
 
 export main = createComponent (state, theme, data) ->
   theme.main { className: 'container' }, ->
-    theme.h1 { className: 'heading' }, 'todos'
+    theme.h1 { className: 'heading' }, theme.labels.title
     theme.section { className: 'card' }, ->
       todoForm state, theme, { filter: state.filter }
       todoList state, theme, { items: data.todos, filter: state.filter }

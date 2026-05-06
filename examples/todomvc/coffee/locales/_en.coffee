@@ -1,5 +1,6 @@
 export default
   labels:
+    title: 'todos'
     filters:
       all: 'All'
       active: 'Active'

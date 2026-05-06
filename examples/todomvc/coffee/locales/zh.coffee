@@ -1,5 +1,6 @@
 export default
   labels:
+    title: '待办事项'
     filters:
       all: '全部'
       active: '进行中'
