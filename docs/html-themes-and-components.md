@@ -1,6 +1,6 @@
 # HTML themes and components
 
-TodoMVC builds **HTML strings** with **`createTheme`** (backed by [`superdry/html`](../src/html.js)): each tag name on `theme` is a function. **`createComponent`** wraps a render function that receives **`(state, theme, data)`** and returns HTML.
+TodoMVC builds **HTML strings** with **`createTheme`** (backed by [`superdry/html`](../src/html.js)): each tag name on `theme` is a function. **`createComponent`** from **`superdry/controller`** wraps a render function that receives **`(state, theme, data)`** and returns HTML.
 
 Full sources: [`examples/todomvc/coffee/themes/index.coffee`](../examples/todomvc/coffee/themes/index.coffee) (theme + **`layout`** shell), [`examples/todomvc/coffee/themes/components.coffee`](../examples/todomvc/coffee/themes/components.coffee) (fragments + **`main`**). The app wires **`main`** into **`layout`** in **`renderPage`** (see [`app.coffee`](../examples/todomvc/coffee/app.coffee)).
 
@@ -34,8 +34,10 @@ A row is a **`createComponent`** that only needs **`theme`** and **`data`** (sta
 
 ```coffee
 # examples/todomvc/coffee/themes/components.coffee
-export todoRow = createComponent (_state, theme, data) ->
-  actionQuery = "?filter=#{encodeURIComponent(data.filter)}"
+import { createComponent, queryFor } from 'superdry/controller'
+
+export todoRow = createComponent (state, theme, data) ->
+  actionQuery = queryFor filter: data.filter, lang: state.lang
   theme.li { className: 'row', id: "todo-#{data.todo.id}" }, ->
     theme.form { dataElemLoading: '..', method: 'patch', action: "/todos/#{data.todo.id}/toggle#{actionQuery}" }, ->
       theme.button { className: 'checkbox', type: 'submit' }, (if data.todo.completed then '✓' else '')

@@ -44,20 +44,12 @@ export findTodoById = (db, id) ->
 
 ## Validation messages
 
-Validation messages can be supplied with app config:
-
-```coffee
-# langs/zh.coffee
-export default
-  model:
-    validations:
-      type: '${field}应该是${type}类型'
-      maxLength: '${field}应该少于${maxLength}个字符'
-```
+Superdry includes framework-owned validation messages for supported languages. If `parseState` sets `state.lang`, model validation uses that language for the current request. See [Localization](localization.md) for a `?lang=zh` example.
 
 ```coffee
 app = newApp
-  model: zh.model
+  parseState: ({ url }) ->
+    lang: url.searchParams.get('lang') ? 'en'
 ```
 
 The placeholders come from the failed rule, such as `field`, `type`, and `maxLength`.

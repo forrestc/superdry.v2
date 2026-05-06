@@ -1,5 +1,10 @@
 import { eq as drizzleEq } from 'drizzle-orm';
 import { integer, sqliteTable, text as sqliteText } from 'drizzle-orm/sqlite-core';
+import {
+  MODEL_VALIDATION_MESSAGES,
+  formatMessage,
+  frameworkLocaleFor,
+} from './localization.js';
 
 export { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
 export { count } from 'drizzle-orm';
@@ -9,16 +14,9 @@ const MODEL_TABLE_SYMBOL = Symbol('superdryModelTable');
 const MODEL_COLUMN_SYMBOL = Symbol('superdryModelColumn');
 const DB_WRAPPED_SYMBOL = Symbol('superdryModelDbWrapped');
 
-const DEFAULT_VALIDATION_MESSAGES = {
-  type: '${field} should be a ${type}',
-  notNull: '${field} is required',
-  maxLength: '${field} should be less than ${maxLength} chars',
-  format: '${field} is invalid',
-};
-
 export const EMAIL_FORMAT = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-let globalValidationMessages = { ...DEFAULT_VALIDATION_MESSAGES };
+let globalValidationMessages = { ...MODEL_VALIDATION_MESSAGES.en };
 
 export class ModelValidationError extends Error {
   constructor(message, details = []) {
@@ -39,8 +37,8 @@ export const configureModelMessages = (messages = {}) => {
 };
 
 const renderMessage = (messages, rule, context) => {
-  const template = messages?.[rule] ?? DEFAULT_VALIDATION_MESSAGES[rule] ?? DEFAULT_VALIDATION_MESSAGES.format;
-  return String(template).replace(/\$\{([^}]+)\}/g, (_, key) => context[key] ?? '');
+  const template = messages?.[rule] ?? MODEL_VALIDATION_MESSAGES.en[rule] ?? MODEL_VALIDATION_MESSAGES.en.format;
+  return formatMessage(template, context);
 };
 
 const buildColumnByType = (kind, fieldName, options = {}) => {
@@ -333,17 +331,29 @@ const wrapUpdateBuilder = (builder, table, messages) => {
   return builder;
 };
 
-const resolveWrapperMessages = (options = {}) =>
-  options.model?.validations ??
-  options.lang?.model?.validations ??
-  options.messages?.model?.validations ??
-  options.messages?.validations ??
-  options.messages;
+const resolveWrapperMessages = (options = {}, context = {}) => {
+  const modelMessages = typeof options.model === 'function'
+    ? options.model(context)
+    : options.model;
+  const messages = typeof options.messages === 'function'
+    ? options.messages(context)
+    : options.messages;
+  const frameworkMessages = frameworkLocaleFor(context.state?.lang ?? context.query?.lang)
+    .model
+    .validations;
 
-export const wrapModelDb = (db, options = {}) => {
+  return modelMessages?.validations ??
+    options.lang?.model?.validations ??
+    messages?.model?.validations ??
+    messages?.validations ??
+    messages ??
+    frameworkMessages;
+};
+
+export const wrapModelDb = (db, options = {}, context = {}) => {
   if (!db || db[DB_WRAPPED_SYMBOL]) return db;
 
-  const messages = resolveWrapperMessages(options);
+  const messages = resolveWrapperMessages(options, context);
   const originalInsert = db.insert.bind(db);
   const originalUpdate = db.update.bind(db);
   const originalWith = db.with?.bind(db);

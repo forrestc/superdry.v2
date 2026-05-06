@@ -1,4 +1,5 @@
-import { createTheme, createComponent } from 'superdry'
+import { createTheme } from 'superdry'
+import { createComponent } from 'superdry/controller'
 
 export theme = createTheme
   tailwindScript: 'https://cdn.tailwindcss.com'
@@ -32,7 +33,7 @@ export layout = createComponent (state, theme, bodyOrFn) ->
     else
       ''
   '<!doctype html>' +
-    theme.html { lang: 'en' }, ->
+    theme.html { lang: state.lang ? 'en' }, ->
       theme.head ->
         theme.meta { charset: 'utf-8' }
         theme.meta { name: 'viewport', content: 'width=device-width, initial-scale=1' }

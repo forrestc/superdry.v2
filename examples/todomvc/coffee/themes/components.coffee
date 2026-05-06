@@ -1,10 +1,10 @@
-import { createComponent } from 'superdry'
+import { createComponent, queryFor } from 'superdry/controller'
 
-export activeCountText = createComponent (_state, _theme, data) ->
-  "#{data.activeCount} item#{if data.activeCount is 1 then '' else 's'} left"
+export activeCountText = createComponent (_state, theme, data) ->
+  theme.labels.itemsLeft data.activeCount
 
-export todoRow = createComponent (_state, theme, data) ->
-  actionQuery = "?filter=#{encodeURIComponent(data.filter)}"
+export todoRow = createComponent (state, theme, data) ->
+  actionQuery = queryFor filter: data.filter, lang: state.lang
   isHidden =
     (data.filter is 'active' and data.todo.completed) or
     (data.filter is 'completed' and !data.todo.completed)
@@ -22,24 +22,27 @@ export todoList = createComponent (state, theme, data) ->
     data.items.map (todo) ->
       todoRow state, theme, { todo, filter: data.filter }
 
-export todoForm = createComponent (_state, theme, data) ->
-  actionQuery = "?filter=#{encodeURIComponent(data.filter)}"
+export todoForm = createComponent (state, theme, data) ->
+  actionQuery = queryFor filter: data.filter, lang: state.lang
   theme.form { className: 'form', id: 'new-todo-form', method: 'post', action: "/todos#{actionQuery}" }, ->
     theme.input
       className: 'formInput'
       id: 'new-todo-input'
       name: 'text'
-      placeholder: 'What needs to be done?'
+      placeholder: theme.labels.newTodoPlaceholder
       required: true
 
 export todoFooter = createComponent (state, theme, data) ->
+  linkQuery = (filter) ->
+    queryFor filter: filter, lang: (if state.lang is 'en' then null else state.lang)
+  { all, active, completed } = theme.labels.filters
   theme.footer { className: 'footer', id: 'todo-footer' }, ->
     theme.span { id: 'active-count' }, activeCountText state, theme, { activeCount: data.activeCount }
 
     theme.nav { className: 'filters' }, ->
-      theme.a { className: ['filterLink', data.filter is 'all' and 'filterLinkActive'], href: '/?filter=all' }, 'All'
-      theme.a { className: ['filterLink', data.filter is 'active' and 'filterLinkActive'], href: '/?filter=active' }, 'Active'
-      theme.a { className: ['filterLink', data.filter is 'completed' and 'filterLinkActive'], href: '/?filter=completed' }, 'Completed'
+      theme.a { className: ['filterLink', data.filter is 'all' and 'filterLinkActive'], href: "/#{linkQuery('all')}" }, all
+      theme.a { className: ['filterLink', data.filter is 'active' and 'filterLinkActive'], href: "/#{linkQuery('active')}" }, active
+      theme.a { className: ['filterLink', data.filter is 'completed' and 'filterLinkActive'], href: "/#{linkQuery('completed')}" }, completed
 
 export main = createComponent (state, theme, data) ->
   theme.main { className: 'container' }, ->

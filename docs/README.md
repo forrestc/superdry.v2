@@ -9,8 +9,9 @@ Examples are taken from [`examples/todomvc`](../examples/todomvc). Run it locall
 3. **[Turbo Streams](turbo-streams.md)** — Reuse the **same** `todoRow` in a controller to refresh one list item after toggle (no duplicate markup).
 4. **[Broadcast](broadcast.md)** — Push the same Turbo Stream to other windows with `broadcast 'toggle', id`.
 5. **[App and routing](app-and-routing.md)** — Wire `newApp`, `GET /`, and `createRoute`.
-6. **[Data and models](data-and-models.md)** — Drizzle table and queries.
-7. **[Coffee and build](coffee-and-build.md)** — `superdry/coffee-build` and npm scripts.
+6. **[Data and models](data-and-models.md)** — Model definitions, validation, and queries.
+7. **[Localization](localization.md)** — Request language state and localized model validation messages.
+8. **[Coffee and build](coffee-and-build.md)** — `superdry/coffee-build` and npm scripts.
 
 ## Topic index
 
@@ -20,12 +21,15 @@ Examples are taken from [`examples/todomvc`](../examples/todomvc). Run it locall
 - [Turbo Streams](turbo-streams.md)
 - [Broadcast](broadcast.md)
 - [Data and models](data-and-models.md)
+- [Localization](localization.md)
 - [Coffee and build](coffee-and-build.md)
 
 ## Package entry points
 
-- `superdry` — router, `createComponent`, Turbo `res.stream`, `broadcast`, optional Preact helpers
+- `superdry` — router, Turbo `res.stream`, `broadcast`, optional Preact helpers
+- `superdry/controller` — `createComponent`, `queryFor`, localization formatters, and controller/view helpers
 - `superdry/html` — HTML theme implementation (used by `createTheme` on the main package)
+- `superdry/localization` — shared `${...}` message formatting and framework locales
 - `superdry/model` — model definitions, validations, and Drizzle sqlite re-exports
 - `superdry/broadcast` — broadcast adapter factories and Durable Object class
 - `superdry/coffee-build` — CoffeeScript compile + Bun bundle

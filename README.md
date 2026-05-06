@@ -57,7 +57,9 @@ The TodoMVC example already uses **HTML-over-the-wire** via Turbo Streams. Possi
 `superdry` exposes a runtime API for Worker apps:
 
 - `newApp(config)` — request router, `GET /` page pipeline, `app.route` mounting, `res.stream` Turbo helper
-- `createComponent(renderFn)` — fragment / page renderer
+- `createComponent(renderFn)` — fragment / page renderer, available from `superdry/controller`
+- `queryFor(params)` — query-string helper, available from `superdry/controller`
+- `formatMessage(template, values)` / `pluralMessage(count, forms)` — shared localization helpers
 - `createTheme(themeDef)` — HTML tag proxy + `classes` map (from `superdry/html`)
 
 TodoMVC-style wiring is in [docs/app-and-routing.md](docs/app-and-routing.md). Minimal shape:

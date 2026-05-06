@@ -4,7 +4,9 @@
   "main": "src/superdry.js",
   "exports": {
     ".": "./src/superdry.js",
+    "./controller": "./src/controller.js",
     "./html": "./src/html.js",
+    "./localization": "./src/localization.js",
     "./coffee-build": "./src/coffee-build.js",
     "./model": "./src/model.js",
     "./broadcast": "./src/broadcast/index.js",

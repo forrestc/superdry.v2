@@ -22,6 +22,8 @@ export {
   ensureTheme as ensureHtmlTheme,
 } from './html.js';
 export * from './broadcast/index.js';
+export * from './controller.js';
+export * from './localization.js';
 export * from './model.js';
 
 // --- THEME PROXY ---
@@ -61,23 +63,6 @@ export const createTheme = (baseOrTheme, overrideTheme) => {
     return ensureTheme(baseOrTheme ?? {});
   }
   return ensureTheme(mergeTheme(baseOrTheme ?? {}, overrideTheme ?? {}));
-};
-
-export const createComponent = (renderFn) => (...args) => {
-  const [stateOrProps, theme, data, ctx] = args;
-  // Backward-compatible: supports both
-  // 1) component(state, theme, data, ctx)
-  // 2) component({ state, theme, data, ctx })
-  if (
-    args.length === 1 &&
-    stateOrProps &&
-    typeof stateOrProps === 'object' &&
-    ('state' in stateOrProps || 'theme' in stateOrProps || 'data' in stateOrProps || 'ctx' in stateOrProps)
-  ) {
-    const props = stateOrProps;
-    return renderFn(props.state, ensureTheme(props.theme), props.data, props.ctx);
-  }
-  return renderFn(stateOrProps, ensureTheme(theme), data, ctx);
 };
 
 export const h = (value = '') =>
@@ -399,7 +384,7 @@ export const newApp = (config) => {
       db.desc = desc;
       db.eq = eq;
       db.sql = sql;
-      wrapModelDb(db, config);
+      wrapModelDb(db, config, { request, env, url, query, state });
       const app = {
         env,
         db,
