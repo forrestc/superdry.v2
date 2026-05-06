@@ -1,5 +1,6 @@
 # macOS / editor
 .DS_Store
+patches/*
 
 # generated browser client embed (run `npm run embed-client` or `npm install`)
 src/superdry-client-embedded.js

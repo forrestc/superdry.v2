@@ -4,41 +4,60 @@ Handlers use **`app.db`** (Drizzle on D1). TodoMVC keeps the **table definition*
 
 ---
 
-## Table definition
+## Model definition
 
-Imports come from **`superdry/model`** (Drizzle re-exports).
+Imports come from **`superdry/model`**. `createModel` keeps the Drizzle table and validation rules in one place.
 
 ```coffee
 # examples/todomvc/coffee/models/todo.coffee (excerpt)
-import { integer, sqliteTable, text, count } from 'superdry/model'
+import { createModel, type, count } from 'superdry/model'
 
-export todos = sqliteTable 'todos',
-  id: integer('id').primaryKey autoIncrement: true
-  text: text('text').notNull()
-  completed: integer('completed', mode: 'boolean').notNull().default(false)
+export Todo = createModel table: 'todos', fields:
+  id: type('integer').primaryKey autoIncrement: true
+  text: type('text').maxLength(24).notNull()
+  completed: type('boolean').notNull().default(false)
+
+export todosTable = Todo.table
 ```
 
 ---
 
 ## Using `app.db` in a query
 
-**`db.eq`**, **`db.desc`**, etc. are attached by the framework. Example: list by filter.
+**`db.eq`**, **`db.desc`**, etc. are attached by the framework. Model tables also validate mutation values and coerce typed predicate values.
 
 ```coffee
 # examples/todomvc/coffee/models/todo.coffee (excerpt)
-export listTodos = (db, filter = 'all') ->
-  selectedFilter = normalizeFilter(filter)
-  if selectedFilter is 'active'
-    return db.select().from(todos).where(db.eq(todos.completed, false)).orderBy(db.desc(todos.id))
-  if selectedFilter is 'completed'
-    return db.select().from(todos).where(db.eq(todos.completed, true)).orderBy(db.desc(todos.id))
-  db.select().from(todos).orderBy(db.desc(todos.id))
+export createTodo = (db, text) ->
+  todo = new Todo { text, completed: false }
+  [insertedTodo] = await db.insert(todosTable).values(todo).returning()
+  insertedTodo
+
+export findTodoById = (db, id) ->
+  [todo] = await db.select().from(todosTable).where(db.eq(todosTable.id, id)).limit(1)
+  todo
 ```
 
-**`toggleTodoCompleted`**, **`createTodo`**, and **`deleteTodoById`** in the same file show **`update`**, **`insert`**, and **`delete`** patterns the controller calls.
+`db.insert(todosTable).values(...)` and `db.update(todosTable).set(...)` validate model fields. `db.eq(todosTable.id, id)` coerces `id` with `Number()` and throws a 400 validation error if it is not an integer.
 
 ---
 
-## Optional: `createModel` / `type()` in `superdry`
+## Validation messages
 
-TodoMVC does **not** use this. For apps that want a **single definition** for both Drizzle columns and **`validate(record)`**, the main package exposes **`createModel`** and **`type('text').notNull().format(...)`**. Use that when validation rules should stay next to the schema; otherwise **`sqliteTable`** as above is enough.
+Validation messages can be supplied with app config:
+
+```coffee
+# langs/zh.coffee
+export default
+  model:
+    validations:
+      type: '${field}应该是${type}类型'
+      maxLength: '${field}应该少于${maxLength}个字符'
+```
+
+```coffee
+app = newApp
+  model: zh.model
+```
+
+The placeholders come from the failed rule, such as `field`, `type`, and `maxLength`.

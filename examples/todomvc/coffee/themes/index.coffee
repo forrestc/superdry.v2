@@ -21,6 +21,7 @@ export theme = createTheme
     filters: 'flex gap-2'
     filterLink: 'no-underline text-inherit px-2 py-1'
     filterLinkActive: 'border rounded border-red-900/35'
+    error: 'mt-4 rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm'
 
 export layout = createComponent (state, theme, bodyOrFn) ->
   inner =

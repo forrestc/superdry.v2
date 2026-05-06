@@ -48,3 +48,4 @@ export main = createComponent (state, theme, data) ->
       todoForm state, theme, { filter: state.filter }
       todoList state, theme, { items: data.todos, filter: state.filter }
       todoFooter state, theme, { activeCount: data.activeCount, filter: state.filter }
+    theme.div { className: 'error', dataSuperdryErrors: true, hidden: true }

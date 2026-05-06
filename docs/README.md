@@ -26,7 +26,7 @@ Examples are taken from [`examples/todomvc`](../examples/todomvc). Run it locall
 
 - `superdry` — router, `createComponent`, Turbo `res.stream`, `broadcast`, optional Preact helpers
 - `superdry/html` — HTML theme implementation (used by `createTheme` on the main package)
-- `superdry/model` — Drizzle sqlite re-exports
+- `superdry/model` — model definitions, validations, and Drizzle sqlite re-exports
 - `superdry/broadcast` — broadcast adapter factories and Durable Object class
 - `superdry/coffee-build` — CoffeeScript compile + Bun bundle
 

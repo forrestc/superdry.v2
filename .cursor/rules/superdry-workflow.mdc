@@ -20,6 +20,10 @@ After a pattern works, **squeeze**: move generic pieces into the framework behin
 
 Teach **models, controllers, routes, components, themes, fragments** via docs/examples. Keep Drizzle, Turbo transport, Wrangler/D1 mechanics **inside** the framework or thin adapters. Readers should not need stack trivia to follow examples.
 
+## No JSON over the wire
+
+Superdry picked Turbo/HTML-over-the-wire to avoid passing JSON back and forth for UI flows. Do **not** introduce JSON response/request loops for app interactions; prefer Turbo Streams, HTML fragments, form posts, or plain text for simple errors.
+
 ## Docs follow changes
 
 Every meaningful change—especially big features—**update or add** framework documentation with **concrete examples**. Prefer **structured** docs (topics/pages). Root `README.md` stays the entry (vision, quick start); link deeper docs as they grow. Undocumented features are incomplete.

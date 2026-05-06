@@ -17,6 +17,7 @@
   globalThis.__superdryTurboSubmitChromeInstalled = true;
 
   const ATTR_LOADING_ANCHOR = "data-elem-loading";
+  const ATTR_ERROR_TARGET = "data-superdry-errors";
 
   /** @type {WeakMap<HTMLFormElement, { controls: HTMLElement[]; bar: HTMLElement; anchor: HTMLElement; positionFixed: boolean }>} */
   const pending = new WeakMap();
@@ -71,6 +72,53 @@
     return wrap;
   }
 
+  function resolveErrorTarget() {
+    return document.querySelector(`[${ATTR_ERROR_TARGET}]`);
+  }
+
+  function clearErrorTarget() {
+    const target = resolveErrorTarget();
+    if (!target) return;
+    target.textContent = "";
+    target.hidden = true;
+  }
+
+  function showError(message) {
+    const target = resolveErrorTarget();
+    if (!target) return false;
+    target.textContent = "";
+    const messages = String(message || "Something went wrong.")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    const close = document.createElement("button");
+    close.type = "button";
+    close.setAttribute("aria-label", "Dismiss error");
+    close.textContent = "×";
+    close.style.cssText =
+      "float:right;margin:-0.125rem 0 0 1rem;border:0;background:transparent;color:inherit;" +
+      "font:inherit;font-size:1.25em;line-height:1;cursor:pointer;";
+    close.addEventListener("click", clearErrorTarget);
+
+    if (messages.length <= 1) {
+      const text = document.createElement("span");
+      text.textContent = messages[0] || "Something went wrong.";
+      target.append(close, text);
+    } else {
+      const list = document.createElement("ul");
+      list.style.cssText = "margin:0;padding-left:1.25rem;";
+      for (const item of messages) {
+        const li = document.createElement("li");
+        li.textContent = item;
+        list.appendChild(li);
+      }
+      target.append(close, list);
+    }
+    target.hidden = false;
+    return true;
+  }
+
   /**
    * @param {HTMLFormElement} form
    * @returns {HTMLElement[]}
@@ -108,6 +156,7 @@
     const form = ev.target;
     if (!(form instanceof HTMLFormElement)) return;
 
+    clearErrorTarget();
     injectKeyframesOnce();
     const controls = disableFormControls(form);
     const anchor = resolveLoadingAnchor(form);
@@ -140,8 +189,24 @@
     if (state.positionFixed) state.anchor.style.position = "";
   }
 
+  async function onBeforeFetchResponse(ev) {
+    const response = ev.detail?.fetchResponse?.response;
+    if (!(response instanceof Response)) return;
+    if (response.status < 400 || response.status >= 500) return;
+
+    const target = resolveErrorTarget();
+    if (!target) return;
+    ev.preventDefault();
+    showError((await response.clone().text()).trim());
+  }
+
   document.addEventListener("turbo:submit-start", onSubmitStart);
   document.addEventListener("turbo:submit-end", onSubmitEnd);
+  document.addEventListener("turbo:before-fetch-response", (ev) => {
+    onBeforeFetchResponse(ev).catch((err) => {
+      console.warn("[superdry-client] failed to render server error:", err);
+    });
+  });
 })();
 
 (function initSuperdryBroadcast() {

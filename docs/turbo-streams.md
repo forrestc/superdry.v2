@@ -53,3 +53,4 @@ See the full `r.post` and `r.delete` blocks in the same controller file.
 
 - Return the **`res.stream`** chain from the handler so the router sends the Turbo Stream **`Response`**.
 - **`req.isTurbo`** is set when **`Accept`** includes **`text/vnd.turbo-stream.html`**. TodoMVC always streams from these routes; you can branch to **`res.redirect`** for non-Turbo clients if you need a fallback.
+- If a Turbo form gets a **4xx** plain-text response, `superdry-client` writes it into the first element with **`data-superdry-errors`** and unhides it. Multiple lines render as a list. The next submit clears it.
