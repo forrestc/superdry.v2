@@ -1,7 +1,6 @@
-import { formatSseFrame, sseHeaders } from "./sse.js";
+import { formatSseFrame, SSE_HEARTBEAT_MS, sseHeaders, ssePingFrame } from "./sse.js";
 
 const encoder = new TextEncoder();
-const HEARTBEAT_MS = 25000;
 
 export const createInMemoryBroadcastAdapter = () => {
   const channels = new Map();
@@ -50,11 +49,11 @@ export const createInMemoryBroadcastAdapter = () => {
           );
           subscriber.heartbeatId = setInterval(() => {
             try {
-              controller.enqueue(encoder.encode(": ping\n\n"));
+              controller.enqueue(encoder.encode(ssePingFrame()));
             } catch {
               removeSubscriber(subscribers, subscriber);
             }
-          }, HEARTBEAT_MS);
+          }, SSE_HEARTBEAT_MS);
         },
         cancel() {
           removeSubscriber(subscribers, subscriber);

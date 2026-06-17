@@ -74,6 +74,8 @@ theme.importScript theme.turboScript, theme.clientScript
 
 By default, Superdry uses an in-memory adapter. That is enough for local development and single-isolate demos.
 
+On deployed Cloudflare Workers, the in-memory adapter is **per isolate**. Two tabs can look connected while their SSE subscriptions and form posts land on different isolates, so broadcasts silently miss. That often shows up as “works in two normal Chrome tabs on a quiet site, fails in incognito or another browser” — not a browser bug. Check the dashboard: if no Durable Object instance appears for broadcast, production is still on in-memory.
+
 For Cloudflare production, bind a Durable Object and export the framework Durable Object class from the Worker entry:
 
 ```coffee
@@ -91,3 +93,5 @@ new_sqlite_classes = ["SuperdryBroadcastDurableObject"]
 ```
 
 When `env.SUPERDRY_BROADCAST` exists, `newApp` uses the Durable Object adapter automatically. For custom routing, pass `broadcastAdapter`, `getBroadcastAdapter`, `broadcastChannel`, or `getBroadcastChannel` to `newApp`.
+
+Broadcast SSE responses set `Content-Encoding: identity` and send periodic comment heartbeats so Cloudflare does not buffer idle streams.

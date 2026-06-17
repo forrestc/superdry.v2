@@ -3,6 +3,8 @@ import { todoRoute, renderTodoCreate, renderTodoToggle, renderTodoDelete } from 
 import { listTodos, countActiveTodos, normalizeFilter } from './models/todo'
 import { layout, theme, main } from './themes'
 
+export { SuperdryBroadcastDurableObject } from 'superdry'
+
 app = newApp
   serveSuperdryClient: true
   broadcasts:

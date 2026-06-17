@@ -1,8 +1,15 @@
+export const SSE_HEARTBEAT_MS = 25000;
+
 export const sseHeaders = () => ({
   "content-type": "text/event-stream; charset=utf-8",
   "cache-control": "no-cache, no-transform",
   connection: "keep-alive",
+  // Prevent Cloudflare from gzip/brotli-buffering SSE on the edge.
+  "content-encoding": "identity",
+  "x-accel-buffering": "no",
 });
+
+export const ssePingFrame = () => ": ping\n\n";
 
 export const stringifySseData = (data) => {
   if (typeof data === "string") return data;

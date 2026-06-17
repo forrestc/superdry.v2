@@ -1,4 +1,4 @@
-import { formatSseFrame, sseHeaders } from "./sse.js";
+import { formatSseFrame, SSE_HEARTBEAT_MS, sseHeaders, ssePingFrame } from "./sse.js";
 
 const encoder = new TextEncoder();
 const jsonHeaders = { "content-type": "application/json; charset=utf-8" };
@@ -27,6 +27,7 @@ export class SuperdryBroadcastDurableObject {
   }
 
   removeSubscriber(subscribers, subscriber) {
+    clearInterval(subscriber.heartbeatId);
     subscribers.delete(subscriber);
   }
 
@@ -47,7 +48,7 @@ export class SuperdryBroadcastDurableObject {
 
   subscribe({ channel, clientId }) {
     const subscribers = this.ensureChannel(channel);
-    const subscriber = { clientId, controller: null };
+    const subscriber = { clientId, controller: null, heartbeatId: null };
 
     const stream = new ReadableStream({
       start: (controller) => {
@@ -59,6 +60,13 @@ export class SuperdryBroadcastDurableObject {
             data: { channel },
           })),
         );
+        subscriber.heartbeatId = setInterval(() => {
+          try {
+            controller.enqueue(encoder.encode(ssePingFrame()));
+          } catch {
+            this.removeSubscriber(subscribers, subscriber);
+          }
+        }, SSE_HEARTBEAT_MS);
       },
       cancel: () => {
         this.removeSubscriber(subscribers, subscriber);

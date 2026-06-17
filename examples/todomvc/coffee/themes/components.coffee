@@ -1,4 +1,6 @@
 import { createComponent, queryFor } from 'superdry/controller'
+import { inputAttrs } from 'superdry/model'
+import { Todo } from '../models/todo'
 
 export activeCountText = createComponent (_state, theme, data) ->
   theme.labels.itemsLeft data.activeCount
@@ -25,12 +27,10 @@ export todoList = createComponent (state, theme, data) ->
 export todoForm = createComponent (state, theme, data) ->
   actionQuery = queryFor filter: data.filter, lang: state.lang
   theme.form { className: 'form', id: 'new-todo-form', method: 'post', action: "/todos#{actionQuery}" }, ->
-    theme.input
+    theme.input inputAttrs Todo, 'text',
       className: 'formInput'
       id: 'new-todo-input'
-      name: 'text'
       placeholder: theme.labels.newTodoPlaceholder
-      required: true
 
 export todoFooter = createComponent (state, theme, data) ->
   linkQuery = (filter) ->

@@ -3,7 +3,18 @@ main = "src/app.js" # This will be the JS entry that loads CoffeeScript
 compatibility_date = "2026-04-25"
 compatibility_flags = ["nodejs_compat"]
 
+[assets]
+directory = "./public"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "todo-db"
-database_id = "local-only-for-now"
+database_id = "bdf36fa1-5b98-4bfd-a403-549c39b20c24"
+
+[[durable_objects.bindings]]
+name = "SUPERDRY_BROADCAST"
+class_name = "SuperdryBroadcastDurableObject"
+
+[[migrations]]
+tag = "v1-superdry-broadcast"
+new_sqlite_classes = ["SuperdryBroadcastDurableObject"]

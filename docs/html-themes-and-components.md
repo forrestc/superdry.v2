@@ -15,8 +15,8 @@ You define a **`classes`** map from **short names** (used in `className`) to rea
 ```coffee
 # examples/todomvc/coffee/themes/index.coffee (abbreviated)
 export theme = createTheme
-  tailwindScript: 'https://cdn.tailwindcss.com'
-  turboScript: 'https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.23/+esm'
+  tailwindScript: '/vendor/tailwind.js'
+  turboScript: '/vendor/turbo.js'
   clientScript: '/superdry-client.js'
   classes:
     row: 'flex items-center gap-3 border-b border-gray-100 px-4 py-3'

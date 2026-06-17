@@ -16,6 +16,13 @@ const DB_WRAPPED_SYMBOL = Symbol('superdryModelDbWrapped');
 
 export const EMAIL_FORMAT = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const INPUT_TYPE_BY_KIND = {
+  boolean: 'checkbox',
+  integer: 'number',
+  text: 'text',
+  uuid: 'text',
+};
+
 let globalValidationMessages = { ...MODEL_VALIDATION_MESSAGES.en };
 
 export class ModelValidationError extends Error {
@@ -177,6 +184,31 @@ const normalizeRecord = (table, record = {}, { partial = false, messages, valida
 
 export const validateRecord = (table, record = {}, options = {}) =>
   normalizeRecord(table, record, options);
+
+const getModelTable = (source) => {
+  if (source?.[MODEL_TABLE_SYMBOL]) return source;
+  if (source?.table?.[MODEL_TABLE_SYMBOL]) return source.table;
+  return null;
+};
+
+export const inputAttrs = (modelOrTable, fieldName, attrs = {}) => {
+  const table = getModelTable(modelOrTable);
+  const field = table?.[MODEL_TABLE_SYMBOL]?.fields?.[fieldName];
+  if (!field) return { name: fieldName, ...attrs };
+
+  const generated = {
+    name: fieldName,
+    type: INPUT_TYPE_BY_KIND[field.kind] ?? 'text',
+  };
+
+  if (field.kind === 'integer') generated.step = 1;
+  if (field.notNull && !field.hasDefault) generated.required = true;
+  if (field.maxLength !== undefined && (field.kind === 'text' || field.kind === 'uuid')) {
+    generated.maxLength = field.maxLength;
+  }
+
+  return { ...generated, ...attrs };
+};
 
 export const coerceFieldValue = (column, value, options = {}) => {
   const field = column?.[MODEL_COLUMN_SYMBOL];

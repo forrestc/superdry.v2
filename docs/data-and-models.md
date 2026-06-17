@@ -53,3 +53,21 @@ app = newApp
 ```
 
 The placeholders come from the failed rule, such as `field`, `type`, and `maxLength`.
+
+---
+
+## Client-side input rules
+
+Use **`inputAttrs`** when a form control maps directly to a model field. It reads the same model metadata used by server-side validation and returns native HTML attributes such as `name`, `type`, `required`, and `maxLength`.
+
+```coffee
+import { inputAttrs } from 'superdry/model'
+import { Todo } from '../models/todo'
+
+theme.input inputAttrs Todo, 'text',
+  className: 'formInput'
+  id: 'new-todo-input'
+  placeholder: theme.labels.newTodoPlaceholder
+```
+
+For TodoMVC, `Todo.text` is `type('text').maxLength(24).notNull()`, so the rendered input includes `name="text"`, `type="text"`, `required`, and `maxlength="24"`. The server remains authoritative; the browser attributes are a DRY first pass that improves feedback before the request is sent.

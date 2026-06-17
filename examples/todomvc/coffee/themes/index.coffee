@@ -2,8 +2,8 @@ import { createTheme } from 'superdry'
 import { createComponent } from 'superdry/controller'
 
 export theme = createTheme
-  tailwindScript: 'https://cdn.tailwindcss.com'
-  turboScript: 'https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.23/+esm'
+  tailwindScript: '/vendor/tailwind.js'
+  turboScript: '/vendor/turbo.js'
   clientScript: '/superdry-client.js'
   classes:
     body: 'm-0 bg-gray-100'
